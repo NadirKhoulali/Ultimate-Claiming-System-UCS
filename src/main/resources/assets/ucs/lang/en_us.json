@@ -1,0 +1,9 @@
+{
+  "command.ucs.about": "Ultimate Claiming System is loaded. Claiming features will be added through the UCS roadmap.",
+  "command.ucs.version": "%s %s",
+  "ucs.configuration.title": "Ultimate Claiming System Config",
+  "ucs.configuration.section.ucs.common.toml": "Ultimate Claiming System Config",
+  "ucs.configuration.section.ucs.common.toml.title": "Ultimate Claiming System Config",
+  "ucs.configuration.schemaVersion": "Config Schema Version",
+  "ucs.configuration.logStartupSummary": "Log Startup Summary"
+}
