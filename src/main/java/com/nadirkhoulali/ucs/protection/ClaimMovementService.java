@@ -88,8 +88,8 @@ public final class ClaimMovementService {
             return;
         }
         int tick = server.getTickCount();
-        int lastTick = lastEntryDenialTick.getOrDefault(player.getUUID(), Integer.MIN_VALUE);
-        if (tick - lastTick < config.bans().expulsionCooldownTicks()) {
+        Integer lastTick = lastEntryDenialTick.get(player.getUUID());
+        if (lastTick != null && tick - lastTick < config.bans().expulsionCooldownTicks()) {
             return;
         }
         lastEntryDenialTick.put(player.getUUID(), tick);
@@ -193,8 +193,8 @@ public final class ClaimMovementService {
 
     private void sendMovementDenial(ServerPlayer player, UcsConfigSnapshot config, ProtectionDecision decision) {
         int currentTick = player.server.getTickCount();
-        int lastTick = lastMovementMessageTick.getOrDefault(player.getUUID(), Integer.MIN_VALUE);
-        if (currentTick - lastTick < MOVEMENT_MESSAGE_COOLDOWN_TICKS) {
+        Integer lastTick = lastMovementMessageTick.get(player.getUUID());
+        if (lastTick != null && currentTick - lastTick < MOVEMENT_MESSAGE_COOLDOWN_TICKS) {
             return;
         }
         lastMovementMessageTick.put(player.getUUID(), currentTick);

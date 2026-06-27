@@ -16,6 +16,7 @@ import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import com.nadirkhoulali.ucs.protection.DefaultProtectionFlagRegistry;
 import com.nadirkhoulali.ucs.protection.ClaimProtectionService;
 import com.nadirkhoulali.ucs.protection.ClaimMovementService;
+import com.nadirkhoulali.ucs.protection.ProtectionAdminService;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.SavedDataClaimRepository;
 import com.nadirkhoulali.ucs.storage.UcsClaimsSavedData;
@@ -25,13 +26,14 @@ import java.util.Optional;
 
 public final class UcsServices {
     private final UcsPermissionService permissionService = new UcsPermissionService();
+    private final ProtectionAdminService protectionAdminService = new ProtectionAdminService();
     private final ClaimCreationService claimCreationService = new ClaimCreationService();
     private final ClaimChunkEditService claimChunkEditService = new ClaimChunkEditService();
     private final ClaimExpulsionService claimExpulsionService = new ClaimExpulsionService();
     private final ClaimMetadataService claimMetadataService = new ClaimMetadataService();
     private final ClaimRoleService claimRoleService = new ClaimRoleService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
-    private final ClaimProtectionService claimProtectionService = new ClaimProtectionService();
+    private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
     private final ProtectionFlagRegistry protectionFlags = DefaultProtectionFlagRegistry.withBuiltIns();
     private ClaimRepository claimRepository;
@@ -91,6 +93,10 @@ public final class UcsServices {
         return claimProtectionService;
     }
 
+    public ProtectionAdminService protectionAdmin() {
+        return protectionAdminService;
+    }
+
     public ClaimMovementService claimMovement() {
         return claimMovementService;
     }
@@ -99,6 +105,7 @@ public final class UcsServices {
         claimTeleportService.clear();
         claimExpulsionService.clear();
         claimMovementService.clear();
+        protectionAdminService.clear();
         this.claimRepository = null;
         this.claimService = null;
         UcsApiProvider.clearActiveAccess();

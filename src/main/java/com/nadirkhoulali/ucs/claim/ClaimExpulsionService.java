@@ -50,8 +50,8 @@ public final class ClaimExpulsionService {
             }
 
             int tick = server.getTickCount();
-            int lastTick = lastAutomaticExpulsionTick.getOrDefault(player.getUUID(), Integer.MIN_VALUE);
-            if (tick - lastTick < config.bans().expulsionCooldownTicks()) {
+            Integer lastTick = lastAutomaticExpulsionTick.get(player.getUUID());
+            if (lastTick != null && tick - lastTick < config.bans().expulsionCooldownTicks()) {
                 continue;
             }
 

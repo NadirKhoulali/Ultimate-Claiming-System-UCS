@@ -58,6 +58,10 @@ A server-side event with no trusted player actor, such as explosion damage, liqu
 
 A temporary player ability grant owned by UCS while the player remains in a claim where `ucs:fly` allows their effective roles. UCS tracks only the grants it creates and removes those grants when the player leaves or loses permission.
 
+## Admin Bypass
+
+A temporary per-player state that lets an authorized administrator pass protection checks while still emitting an observable protection decision with the `admin_bypass` reason.
+
 ## Lease
 
 A tenant contract that grants a tenant role on a claim for a time window. Lease is separate from tax: rent is paid by a tenant, while tax/upkeep is paid by an owner to the server sink.

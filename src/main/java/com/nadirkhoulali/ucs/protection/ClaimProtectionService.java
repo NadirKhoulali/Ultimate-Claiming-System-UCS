@@ -12,11 +12,13 @@ import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.RoleId;
+import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -40,6 +42,18 @@ import java.util.UUID;
 import java.util.function.Predicate;
 
 public final class ClaimProtectionService {
+    private final ProtectionAdminService protectionAdmin;
+    private final UcsPermissionService permissions;
+
+    public ClaimProtectionService() {
+        this(new ProtectionAdminService(), new UcsPermissionService());
+    }
+
+    public ClaimProtectionService(ProtectionAdminService protectionAdmin, UcsPermissionService permissions) {
+        this.protectionAdmin = Objects.requireNonNull(protectionAdmin, "protectionAdmin");
+        this.permissions = Objects.requireNonNull(permissions, "permissions");
+    }
+
     public ProtectionDecision checkBlockBreak(
             UcsClaimService claimService,
             ProtectionFlagRegistry registry,
@@ -390,6 +404,26 @@ public final class ClaimProtectionService {
         }
 
         Optional<UUID> actor = Optional.ofNullable(player).map(Entity::getUUID);
+        if (player instanceof ServerPlayer serverPlayer && protectionAdmin.isBypassing(serverPlayer, permissions)) {
+            ProtectionDecision bypassDecision = ProtectionDecision.allow(
+                    flagId,
+                    "admin_bypass",
+                    effectiveRoles(claim.orElseThrow(), serverPlayer.getUUID(), config)
+            );
+            UcsProtectionDecisionEvent event = new UcsProtectionDecisionEvent(
+                    chunk,
+                    claim,
+                    flagId,
+                    actor,
+                    true,
+                    bypassDecision.reason()
+            );
+            NeoForge.EVENT_BUS.post(event);
+            return event.allowed()
+                    ? ProtectionDecision.allow(flagId, event.reason(), bypassDecision.effectiveRoles())
+                    : ProtectionDecision.deny(flagId, event.reason(), bypassDecision.effectiveRoles());
+        }
+
         ProtectionDecision decision = evaluateClaimAction(registry, config, claim.orElseThrow(), flagId, actor, player != null);
         if (decision.abstained()) {
             return decision;

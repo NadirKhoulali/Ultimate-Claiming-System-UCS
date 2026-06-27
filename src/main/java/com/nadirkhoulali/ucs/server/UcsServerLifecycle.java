@@ -1,12 +1,14 @@
 package com.nadirkhoulali.ucs.server;
 
 import com.nadirkhoulali.ucs.UcsMod;
+import com.nadirkhoulali.ucs.api.ClaimView;
 import com.nadirkhoulali.ucs.command.ClaimCommands;
 import com.nadirkhoulali.ucs.command.UcsCommands;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.config.UcsConfigValidationReport;
 import com.nadirkhoulali.ucs.api.protection.UcsBuiltInProtectionFlags;
+import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import net.minecraft.core.BlockPos;
@@ -21,6 +23,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -34,10 +37,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.BaseFireBlock;
 
 import java.util.ArrayList;
@@ -94,6 +99,11 @@ public final class UcsServerLifecycle {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         services.clearServerState();
+    }
+
+    @SubscribeEvent
+    public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        services.protectionAdmin().clearPlayer(event.getEntity().getUUID());
     }
 
     @SubscribeEvent
@@ -592,11 +602,25 @@ public final class UcsServerLifecycle {
         }
     }
 
-    private static void sendProtectionDenial(Player player, UcsConfigSnapshot config, String flagId, String reason) {
+    private void sendProtectionDenial(Player player, UcsConfigSnapshot config, String flagId, String reason) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            String actionKey = flagId + ":" + reason;
+            if (!services.protectionAdmin().shouldSendDenial(serverPlayer, actionKey, serverPlayer.server.getTickCount())) {
+                return;
+            }
+        }
         player.displayClientMessage(
                 Component.translatable("command.ucs.protection.denied", flagId, reason),
                 config.messages().sendActionBarDenials()
         );
+        if (player instanceof ServerPlayer serverPlayer && services.protectionAdmin().isDebugging(serverPlayer, services.permissions())) {
+            serverPlayer.sendSystemMessage(Component.translatable(
+                    "command.ucs.protection.debug",
+                    debugClaimName(serverPlayer),
+                    flagId,
+                    reason
+            ));
+        }
     }
 
     private static List<BlockPos> pistonAffectedPositions(PistonEvent.Pre event) {
@@ -619,5 +643,17 @@ public final class UcsServerLifecycle {
             return false;
         }
         return event.getPlayer().getInventory().add(stack);
+    }
+
+    private String debugClaimName(ServerPlayer player) {
+        return services.claimService()
+                .flatMap(claimService -> claimService.findClaim(chunkAt(player)))
+                .map(ClaimView::displayName)
+                .orElse("none");
+    }
+
+    private static ChunkKey chunkAt(ServerPlayer player) {
+        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+        return new ChunkKey(player.serverLevel().dimension().location().toString(), chunkPos.x, chunkPos.z);
     }
 }

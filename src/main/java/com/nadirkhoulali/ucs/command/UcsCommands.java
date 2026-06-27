@@ -16,6 +16,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModList;
 
 import java.util.Collection;
@@ -32,6 +33,8 @@ public final class UcsCommands {
                 .then(Commands.literal("about").executes(UcsCommands::showAbout))
                 .then(Commands.literal("help").executes(UcsCommands::showHelp))
                 .then(Commands.literal("version").executes(UcsCommands::showVersion))
+                .then(Commands.literal("bypass").executes(context -> toggleBypass(context, services)))
+                .then(Commands.literal("debug").executes(context -> toggleDebug(context, services)))
                 .then(Commands.literal("archive")
                         .then(Commands.literal("list").executes(context -> listArchives(context, services)))
                         .then(Commands.literal("restore")
@@ -63,6 +66,8 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.permissions"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.archive_list"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.archive_restore"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.bypass"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.debug"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_radius"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_add"), false);
@@ -80,6 +85,42 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_ban"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_unban"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_kick"), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int toggleBypass(CommandContext<CommandSourceStack> context, UcsServices services) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.BYPASS)) {
+            return 0;
+        }
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.ucs.player_only"));
+            return 0;
+        }
+        boolean enabled = services.protectionAdmin().toggleBypass(player);
+        source.sendSuccess(
+                () -> Component.translatable(enabled ? "command.ucs.bypass.enabled" : "command.ucs.bypass.disabled"),
+                true
+        );
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int toggleDebug(CommandContext<CommandSourceStack> context, UcsServices services) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.DEBUG)) {
+            return 0;
+        }
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.ucs.player_only"));
+            return 0;
+        }
+        boolean enabled = services.protectionAdmin().toggleDebug(player);
+        source.sendSuccess(
+                () -> Component.translatable(enabled ? "command.ucs.debug.enabled" : "command.ucs.debug.disabled"),
+                false
+        );
         return Command.SINGLE_SUCCESS;
     }
 
