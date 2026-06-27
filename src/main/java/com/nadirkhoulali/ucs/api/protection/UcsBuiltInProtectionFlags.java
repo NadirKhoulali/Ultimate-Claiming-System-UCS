@@ -29,6 +29,7 @@ public final class UcsBuiltInProtectionFlags {
     public static final FlagId FIRE_SPREAD = new FlagId("ucs:fire_spread");
     public static final FlagId LIQUID_FLOW = new FlagId("ucs:liquid_flow");
     public static final FlagId MOB_GRIEFING = new FlagId("ucs:mob_griefing");
+    public static final FlagId MOB_SPAWN = new FlagId("ucs:mob_spawn");
     public static final FlagId WEATHER_CHANGE = new FlagId("ucs:weather_change");
     public static final FlagId PORTAL_USE = new FlagId("ucs:portal_use");
     public static final FlagId TELEPORT = new FlagId("ucs:teleport");
@@ -63,6 +64,7 @@ public final class UcsBuiltInProtectionFlags {
                 naturalFlag(FIRE_SPREAD, "Fire Spread", ProtectionFlagCategory.ENVIRONMENT),
                 naturalFlag(LIQUID_FLOW, "Liquid Flow", ProtectionFlagCategory.ENVIRONMENT),
                 naturalFlag(MOB_GRIEFING, "Mob Griefing", ProtectionFlagCategory.MOBS),
+                naturalFlag(MOB_SPAWN, "Mob Spawn", ProtectionFlagCategory.MOBS),
                 naturalFlag(WEATHER_CHANGE, "Weather Change", ProtectionFlagCategory.ENVIRONMENT),
                 playerFlag(PORTAL_USE, "Portal Use", ProtectionFlagCategory.MOVEMENT),
                 playerFlag(TELEPORT, "Teleport", ProtectionFlagCategory.MOVEMENT),

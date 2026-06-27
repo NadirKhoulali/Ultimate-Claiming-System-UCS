@@ -6,20 +6,26 @@ import com.nadirkhoulali.ucs.command.UcsCommands;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.config.UcsConfigValidationReport;
+import com.nadirkhoulali.ucs.api.protection.UcsBuiltInProtectionFlags;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.EntityMountEvent;
+import net.neoforged.neoforge.event.entity.EntityMobGriefingEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.level.PistonEvent;
+import net.neoforged.neoforge.event.level.block.CreateFluidSourceEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -30,9 +36,11 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.BaseFireBlock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public final class UcsServerLifecycle {
     private final UcsServices services;
@@ -229,7 +237,25 @@ public final class UcsServerLifecycle {
             return;
         }
         UcsConfigSnapshot config = UcsCommonConfig.snapshot();
-        Player actor = services.claimProtection().playerActorFromDamageSource(event.getSource()).orElse(null);
+        Optional<Player> actorOptional = services.claimProtection().playerActorFromDamageSource(event.getSource());
+        if (event.getEntity() instanceof Player target && actorOptional.isPresent()) {
+            Player actor = actorOptional.orElseThrow();
+            var pvpDecision = services.claimProtection().checkPvP(
+                    services.claimService().orElseThrow(),
+                    services.protectionFlags(),
+                    config,
+                    level,
+                    target,
+                    actor
+            );
+            if (pvpDecision.denied()) {
+                event.setCanceled(true);
+                sendProtectionDenial(actor, config, pvpDecision.flagId().value(), pvpDecision.reason());
+                return;
+            }
+        }
+
+        Player actor = actorOptional.orElse(null);
         var decision = services.claimProtection().checkEntityDamage(
                 services.claimService().orElseThrow(),
                 services.protectionFlags(),
@@ -310,6 +336,151 @@ public final class UcsServerLifecycle {
         if (decision.denied() && restoreTossedItem(event)) {
             event.setCanceled(true);
             sendProtectionDenial(event.getPlayer(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onExplosionDetonate(ExplosionEvent.Detonate event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        event.getAffectedBlocks().removeIf(position -> services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                position,
+                UcsBuiltInProtectionFlags.EXPLOSION
+        ).denied());
+        event.getAffectedEntities().removeIf(entity -> services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                entity.blockPosition(),
+                UcsBuiltInProtectionFlags.EXPLOSION
+        ).denied());
+    }
+
+    @SubscribeEvent
+    public void onFluidPlaceBlock(BlockEvent.FluidPlaceBlockEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var flag = event.getNewState().getBlock() instanceof BaseFireBlock
+                ? UcsBuiltInProtectionFlags.FIRE_SPREAD
+                : UcsBuiltInProtectionFlags.LIQUID_FLOW;
+        var decision = services.claimProtection().checkNaturalBoundary(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getLiquidPos(),
+                List.of(event.getPos()),
+                flag
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public void onCreateFluidSource(CreateFluidSourceEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                UcsBuiltInProtectionFlags.LIQUID_FLOW
+        );
+        if (decision.denied()) {
+            event.setCanConvert(false);
+        }
+    }
+
+    @SubscribeEvent
+    public void onMobSpawnPosition(MobSpawnEvent.PositionCheck event) {
+        if (services.claimService().isEmpty()) {
+            return;
+        }
+        ServerLevel level = event.getLevel().getLevel();
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                BlockPos.containing(event.getX(), event.getY(), event.getZ()),
+                UcsBuiltInProtectionFlags.MOB_SPAWN
+        );
+        if (decision.denied()) {
+            event.setResult(MobSpawnEvent.PositionCheck.Result.FAIL);
+        }
+    }
+
+    @SubscribeEvent
+    public void onPotentialSpawns(LevelEvent.PotentialSpawns event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                UcsBuiltInProtectionFlags.MOB_SPAWN
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityMobGriefing(EntityMobGriefingEvent event) {
+        if (!(event.getEntity().level() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getEntity().blockPosition(),
+                UcsBuiltInProtectionFlags.MOB_GRIEFING
+        );
+        if (decision.denied()) {
+            event.setCanGrief(false);
+        }
+    }
+
+    @SubscribeEvent
+    public void onFarmlandTrample(BlockEvent.FarmlandTrampleEvent event) {
+        if (event.getEntity() instanceof Player
+                || !(event.getLevel() instanceof ServerLevel level)
+                || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkNaturalAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                UcsBuiltInProtectionFlags.MOB_GRIEFING
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
         }
     }
 

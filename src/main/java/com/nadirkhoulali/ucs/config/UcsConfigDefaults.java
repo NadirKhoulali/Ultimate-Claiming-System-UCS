@@ -40,7 +40,10 @@ public final class UcsConfigDefaults {
             "ucs:pvp",
             "ucs:explosion",
             "ucs:fire_spread",
-            "ucs:liquid_flow"
+            "ucs:liquid_flow",
+            "ucs:mob_griefing",
+            "ucs:mob_spawn",
+            "ucs:weather_change"
     );
 
     public static final List<String> DEFAULT_SPECIAL_BLOCK_IDS = List.of(

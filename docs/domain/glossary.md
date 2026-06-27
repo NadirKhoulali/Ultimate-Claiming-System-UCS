@@ -50,6 +50,10 @@ A configured block id or block tag that maps a right-clicked block to a protecti
 
 A configured entity type id or entity type tag that maps entity interaction, damage, vehicle use, item pickup, or item drop to a protection decision.
 
+## Natural Action
+
+A server-side event with no trusted player actor, such as explosion damage, liquid flow, mob spawn, mob griefing, or weather policy. Natural actions are evaluated against the affected claim and normally deny when the relevant enabled flag protects the claim.
+
 ## Lease
 
 A tenant contract that grants a tenant role on a claim for a time window. Lease is separate from tax: rent is paid by a tenant, while tax/upkeep is paid by an owner to the server sink.

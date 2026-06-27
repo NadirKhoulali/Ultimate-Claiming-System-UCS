@@ -96,6 +96,8 @@ Interaction targets are classified by configurable exact block ids and `#tag` id
 
 Entity targets use the same exact-id/`#tag` approach for protected entities and vehicles. Player actors are taken directly from interact, attack, pickup, toss, and mount events; damage events also inspect the damage source and projectile owner when present. Natural actors pass through with no player actor, which lets enabled flags deny unsafe automation or mob-driven changes without loading chunks.
 
+Natural protection uses NeoForge-native event surfaces: explosion detonation lists are filtered per affected block/entity, fluid placement and source conversion can be cancelled, mob spawn position and potential-spawn events can be denied, mob-griefing checks can be forced false, and PvP is handled through incoming damage actor resolution. No dedicated NeoForge server event for per-player weather display or vanilla fire spread was found in the 21.1.234 sources; UCS documents those as limitations and covers lava-created fire through fluid placement events where available.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.

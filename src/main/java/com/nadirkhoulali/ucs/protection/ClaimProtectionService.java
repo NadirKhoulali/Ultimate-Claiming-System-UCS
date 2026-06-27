@@ -218,6 +218,61 @@ public final class ClaimProtectionService {
         return checkClaimAction(claimService, registry, config, level, item.blockPosition(), UcsBuiltInProtectionFlags.ITEM_DROP, player);
     }
 
+    public ProtectionDecision checkPvP(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            Player target,
+            Player actor
+    ) {
+        if (target.getUUID().equals(actor.getUUID())) {
+            return ProtectionDecision.abstain(UcsBuiltInProtectionFlags.PVP, "self_damage", Set.of());
+        }
+        return checkClaimAction(claimService, registry, config, level, target.blockPosition(), UcsBuiltInProtectionFlags.PVP, actor);
+    }
+
+    public ProtectionDecision checkNaturalAction(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            BlockPos position,
+            FlagId flagId
+    ) {
+        return checkClaimAction(claimService, registry, config, level, position, flagId, null);
+    }
+
+    public ProtectionDecision checkNaturalBoundary(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            BlockPos sourcePosition,
+            Collection<BlockPos> affectedPositions,
+            FlagId flagId
+    ) {
+        Objects.requireNonNull(affectedPositions, "affectedPositions");
+        Optional<ClaimView> sourceClaim = claimService.findClaim(chunkAt(level, sourcePosition));
+        ProtectionDecision lastAllowed = null;
+        for (BlockPos affectedPosition : affectedPositions.stream().distinct().toList()) {
+            Optional<ClaimView> affectedClaim = claimService.findClaim(chunkAt(level, affectedPosition));
+            if (affectedClaim.isEmpty() || sameClaim(sourceClaim, affectedClaim.orElseThrow())) {
+                continue;
+            }
+            ProtectionDecision decision = checkClaimAction(claimService, registry, config, level, affectedPosition, flagId, null);
+            if (decision.denied()) {
+                return decision;
+            }
+            if (decision.allowed()) {
+                lastAllowed = decision;
+            }
+        }
+        return lastAllowed == null
+                ? ProtectionDecision.abstain(flagId, "no_protected_boundary", Set.of())
+                : lastAllowed;
+    }
+
     public Optional<Player> playerActorFromDamageSource(DamageSource source) {
         Objects.requireNonNull(source, "source");
         Entity causingEntity = source.getEntity();
