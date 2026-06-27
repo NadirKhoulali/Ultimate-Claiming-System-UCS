@@ -51,6 +51,16 @@ Default role ids are `owner`, `member`, `tenant`, `visitor`, and `banned`.
 
 UCS automatically includes the configured trust and banned role ids in the effective role list, which keeps older config files valid after role policy keys are added.
 
+## Bans And Expulsion
+
+Banned-player entry prevention is enabled by default:
+
+- `bans.preventEntry = true`
+- `bans.expulsionSearchRadiusBlocks = 48`
+- `bans.expulsionCooldownTicks = 40`
+
+UCS searches for a safe same-dimension location outside the claim before teleporting a banned or kicked player. If no safe location is found, the player is not moved and receives a failure message.
+
 Default flag ids are namespaced with `ucs:`. Addons should also use namespaced ids.
 
 ## Economy

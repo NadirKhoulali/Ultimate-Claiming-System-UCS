@@ -69,7 +69,10 @@ public final class UcsServerLifecycle {
 
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event) {
-        services.claimRepository()
-                .ifPresent(repository -> services.claimTeleport().tick(event.getServer(), repository, UcsCommonConfig.snapshot()));
+        services.claimRepository().ifPresent(repository -> {
+            UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+            services.claimTeleport().tick(event.getServer(), repository, config);
+            services.claimExpulsion().tick(event.getServer(), repository, config);
+        });
     }
 }

@@ -44,6 +44,51 @@ public final class ClaimRoleService {
         return assignRole(repository, claimService, config, request, target, role, ClaimRoleAction.ASSIGN_ROLE);
     }
 
+    public ClaimRoleResult banPlayer(
+            ClaimRepository repository,
+            UcsClaimService claimService,
+            UcsConfigSnapshot config,
+            ClaimRoleRequest request,
+            ClaimRoleTarget target
+    ) {
+        return assignRole(repository, claimService, config, request, target, new RoleId(config.roles().bannedRoleId()), ClaimRoleAction.BAN);
+    }
+
+    public ClaimRoleResult unbanPlayer(
+            ClaimRepository repository,
+            UcsClaimService claimService,
+            UcsConfigSnapshot config,
+            ClaimRoleRequest request,
+            ClaimRoleTarget target
+    ) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(target, "target");
+        RoleId banned = new RoleId(config.roles().bannedRoleId());
+        return updateOwnedClaim(repository, claimService, request, ClaimRoleAction.UNBAN, target, banned, (claim, owner) -> {
+            if (isClaimOwner(claim, target)) {
+                return failure(ClaimRoleAction.UNBAN, ClaimRoleFailureReason.TARGET_IS_OWNER, target.playerName());
+            }
+
+            Map<RoleId, Set<UUID>> assignments = mutableRoleMap(claim.roleAssignments());
+            Optional.ofNullable(assignments.get(banned)).ifPresent(players -> players.remove(target.playerId()));
+            assignments.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+            Map<RoleId, Set<UUID>> invites = mutableRoleMap(claim.pendingRoleInvites());
+            return save(
+                    claimService,
+                    request,
+                    owner,
+                    target,
+                    banned,
+                    ClaimRoleAction.UNBAN,
+                    claim,
+                    assignments,
+                    invites,
+                    false,
+                    "unbanned " + target.playerName()
+            );
+        });
+    }
+
     public ClaimRoleResult removePlayer(
             ClaimRepository repository,
             UcsClaimService claimService,
@@ -149,9 +194,16 @@ public final class ClaimRoleService {
                     assignments,
                     invites,
                     pending,
-                    pending ? "invited " + target.playerName() + " as " + role.value() : "assigned " + target.playerName() + " to " + role.value()
+                    auditDetail(action, target, role, pending)
             );
         });
+    }
+
+    private static String auditDetail(ClaimRoleAction action, ClaimRoleTarget target, RoleId role, boolean pending) {
+        if (action == ClaimRoleAction.BAN) {
+            return "banned " + target.playerName();
+        }
+        return pending ? "invited " + target.playerName() + " as " + role.value() : "assigned " + target.playerName() + " to " + role.value();
     }
 
     private ClaimRoleResult resolveInvite(
@@ -231,7 +283,7 @@ public final class ClaimRoleService {
 
         PlayerOwner owner = ClaimOwnership.player(request.playerId(), request.playerName());
         Claim claim = existing.orElseThrow();
-        if (!ClaimOwnership.isOwnedBy(claim, owner)) {
+        if (!request.adminOverride() && !ClaimOwnership.isOwnedBy(claim, owner)) {
             return failure(action, ClaimRoleFailureReason.NOT_OWNER, request.chunk().storageKey());
         }
         return updater.update(claim, owner);

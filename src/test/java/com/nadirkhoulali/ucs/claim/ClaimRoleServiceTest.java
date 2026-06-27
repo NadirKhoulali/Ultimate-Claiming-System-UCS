@@ -117,6 +117,79 @@ class ClaimRoleServiceTest {
     }
 
     @Test
+    void banRemovesConflictingRoleGrants() {
+        UUID owner = UUID.randomUUID();
+        UUID target = UUID.randomUUID();
+        ClaimHarness harness = new ClaimHarness(defaultConfig(false));
+        harness.savePlayerClaim(owner, "Owner", 0, 0);
+        service.trustPlayer(
+                harness.repository,
+                harness.claimService,
+                harness.config,
+                request(owner, "Owner", chunk(0, 0)),
+                new ClaimRoleTarget(target, "Trouble")
+        );
+
+        ClaimRoleResult result = service.banPlayer(
+                harness.repository,
+                harness.claimService,
+                harness.config,
+                request(owner, "Owner", chunk(0, 0)),
+                new ClaimRoleTarget(target, "Trouble")
+        );
+
+        assertEquals(ClaimRoleAction.BAN, result.action());
+        assertFalse(result.claim().orElseThrow().roleAssignments().getOrDefault(new RoleId("member"), Set.of()).contains(target));
+        assertTrue(result.claim().orElseThrow().roleAssignments().get(new RoleId("banned")).contains(target));
+    }
+
+    @Test
+    void adminOverrideCanBanClaimWithoutOwningIt() {
+        UUID owner = UUID.randomUUID();
+        UUID admin = UUID.randomUUID();
+        UUID target = UUID.randomUUID();
+        ClaimHarness harness = new ClaimHarness(defaultConfig(false));
+        harness.savePlayerClaim(owner, "Owner", 0, 0);
+
+        ClaimRoleResult result = service.banPlayer(
+                harness.repository,
+                harness.claimService,
+                harness.config,
+                new ClaimRoleRequest(admin, "Admin", chunk(0, 0), Instant.EPOCH.plusSeconds(10), true),
+                new ClaimRoleTarget(target, "Trouble")
+        );
+
+        assertEquals(ClaimRoleAction.BAN, result.action());
+        assertTrue(result.claim().orElseThrow().roleAssignments().get(new RoleId("banned")).contains(target));
+    }
+
+    @Test
+    void unbanOnlyClearsBannedRole() {
+        UUID owner = UUID.randomUUID();
+        UUID target = UUID.randomUUID();
+        ClaimHarness harness = new ClaimHarness(defaultConfig(false));
+        harness.savePlayerClaim(owner, "Owner", 0, 0);
+        service.banPlayer(
+                harness.repository,
+                harness.claimService,
+                harness.config,
+                request(owner, "Owner", chunk(0, 0)),
+                new ClaimRoleTarget(target, "Trouble")
+        );
+
+        ClaimRoleResult result = service.unbanPlayer(
+                harness.repository,
+                harness.claimService,
+                harness.config,
+                request(owner, "Owner", chunk(0, 0)),
+                new ClaimRoleTarget(target, "Trouble")
+        );
+
+        assertEquals(ClaimRoleAction.UNBAN, result.action());
+        assertFalse(result.claim().orElseThrow().roleAssignments().containsKey(new RoleId("banned")));
+    }
+
+    @Test
     void resolverReturnsBannedBeforeOtherRoles() {
         UUID owner = UUID.randomUUID();
         UUID target = UUID.randomUUID();
@@ -153,6 +226,7 @@ class ClaimRoleServiceTest {
                 new UcsConfigSnapshot.ClaimMetadataPolicy(48, 240),
                 new UcsConfigSnapshot.ClaimTeleportPolicy(3, true, true),
                 new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", requireInviteAcceptance),
+                new UcsConfigSnapshot.BanPolicy(true, 48, 40),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),

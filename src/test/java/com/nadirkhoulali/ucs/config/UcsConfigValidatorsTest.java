@@ -41,6 +41,7 @@ class UcsConfigValidatorsTest {
                 base.claimMetadata(),
                 base.claimTeleport(),
                 base.roles(),
+                base.bans(),
                 base.flags(),
                 base.economy(),
                 base.mapCache(),
@@ -67,6 +68,7 @@ class UcsConfigValidatorsTest {
                 base.claimMetadata(),
                 base.claimTeleport(),
                 base.roles(),
+                base.bans(),
                 base.flags(),
                 base.economy(),
                 base.mapCache(),
@@ -93,6 +95,7 @@ class UcsConfigValidatorsTest {
                 base.claimMetadata(),
                 new UcsConfigSnapshot.ClaimTeleportPolicy(-1, true, true),
                 base.roles(),
+                base.bans(),
                 base.flags(),
                 base.economy(),
                 base.mapCache(),
@@ -119,6 +122,7 @@ class UcsConfigValidatorsTest {
                 base.claimMetadata(),
                 base.claimTeleport(),
                 new UcsConfigSnapshot.RoleDefaults(List.of("owner", "visitor"), "member", "banned", false),
+                base.bans(),
                 base.flags(),
                 base.economy(),
                 base.mapCache(),
@@ -133,6 +137,33 @@ class UcsConfigValidatorsTest {
         assertTrue(report.valid());
         assertTrue(snapshot.roles().defaultRoleIds().contains("member"));
         assertTrue(snapshot.roles().defaultRoleIds().contains("banned"));
+    }
+
+    @Test
+    void rejectsTooSmallExpulsionSearchRadius() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
+                base.roles(),
+                new UcsConfigSnapshot.BanPolicy(true, 1, 40),
+                base.flags(),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        UcsConfigValidationReport report = snapshot.validate();
+
+        assertFalse(report.valid());
+        assertTrue(report.errors().stream().anyMatch(error -> error.contains("bans.expulsionSearchRadiusBlocks")));
     }
 
     @Test
@@ -156,6 +187,7 @@ class UcsConfigValidatorsTest {
                 base.claimMetadata(),
                 base.claimTeleport(),
                 base.roles(),
+                base.bans(),
                 base.flags(),
                 base.economy(),
                 base.mapCache(),
@@ -179,6 +211,7 @@ class UcsConfigValidatorsTest {
                 new UcsConfigSnapshot.ClaimMetadataPolicy(48, 240),
                 new UcsConfigSnapshot.ClaimTeleportPolicy(3, true, true),
                 new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", false),
+                new UcsConfigSnapshot.BanPolicy(true, 48, 40),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),

@@ -50,6 +50,9 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_untrust"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_role"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_invite"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_ban"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_unban"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_kick"), false);
         return Command.SINGLE_SUCCESS;
     }
 

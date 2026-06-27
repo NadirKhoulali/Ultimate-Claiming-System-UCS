@@ -13,6 +13,7 @@ public record UcsConfigSnapshot(
         ClaimMetadataPolicy claimMetadata,
         ClaimTeleportPolicy claimTeleport,
         RoleDefaults roles,
+        BanPolicy bans,
         FlagDefaults flags,
         EconomyPolicy economy,
         MapCachePolicy mapCache,
@@ -72,6 +73,13 @@ public record UcsConfigSnapshot(
             mergedRoleIds.add(bannedRoleId);
             defaultRoleIds = List.copyOf(mergedRoleIds);
         }
+    }
+
+    public record BanPolicy(
+            boolean preventEntry,
+            int expulsionSearchRadiusBlocks,
+            int expulsionCooldownTicks
+    ) {
     }
 
     public record FlagDefaults(List<String> defaultProtectionFlagIds) {

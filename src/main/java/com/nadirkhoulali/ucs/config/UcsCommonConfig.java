@@ -31,6 +31,11 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.ConfigValue<String> DEFAULT_TRUST_ROLE_ID;
     public static final ModConfigSpec.ConfigValue<String> BANNED_ROLE_ID;
     public static final ModConfigSpec.BooleanValue REQUIRE_INVITE_ACCEPTANCE;
+
+    public static final ModConfigSpec.BooleanValue PREVENT_BANNED_ENTRY;
+    public static final ModConfigSpec.IntValue EXPULSION_SEARCH_RADIUS_BLOCKS;
+    public static final ModConfigSpec.IntValue EXPULSION_COOLDOWN_TICKS;
+
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_PROTECTION_FLAG_IDS;
 
     public static final ModConfigSpec.BooleanValue ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS;
@@ -132,6 +137,18 @@ public final class UcsCommonConfig {
         REQUIRE_INVITE_ACCEPTANCE = BUILDER
                 .comment("When true, /claim trust and /claim role create pending invites that targets must accept.")
                 .define("requireInviteAcceptance", false);
+        BUILDER.pop();
+
+        BUILDER.push("bans");
+        PREVENT_BANNED_ENTRY = BUILDER
+                .comment("Whether players assigned the banned claim role are expelled from claims they enter.")
+                .define("preventEntry", true);
+        EXPULSION_SEARCH_RADIUS_BLOCKS = BUILDER
+                .comment("Maximum same-dimension block radius UCS searches for a safe expulsion location outside the claim.")
+                .defineInRange("expulsionSearchRadiusBlocks", 48, 8, 512);
+        EXPULSION_COOLDOWN_TICKS = BUILDER
+                .comment("Minimum ticks between automatic expulsions for the same player.")
+                .defineInRange("expulsionCooldownTicks", 40, 1, 20 * 60 * 10);
         BUILDER.pop();
 
         BUILDER.push("flags");
@@ -251,6 +268,11 @@ public final class UcsCommonConfig {
                         DEFAULT_TRUST_ROLE_ID.get(),
                         BANNED_ROLE_ID.get(),
                         REQUIRE_INVITE_ACCEPTANCE.get()
+                ),
+                new UcsConfigSnapshot.BanPolicy(
+                        PREVENT_BANNED_ENTRY.get(),
+                        EXPULSION_SEARCH_RADIUS_BLOCKS.get(),
+                        EXPULSION_COOLDOWN_TICKS.get()
                 ),
                 new UcsConfigSnapshot.FlagDefaults(List.copyOf(DEFAULT_PROTECTION_FLAG_IDS.get())),
                 new UcsConfigSnapshot.EconomyPolicy(

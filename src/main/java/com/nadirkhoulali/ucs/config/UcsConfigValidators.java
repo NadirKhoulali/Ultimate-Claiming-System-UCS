@@ -37,6 +37,7 @@ public final class UcsConfigValidators {
         validateClaimMetadata(config.claimMetadata(), report);
         validateClaimTeleport(config.claimTeleport(), report);
         validateRoleDefaults(config.roles(), report);
+        validateBans(config.bans(), report);
         validateFlagDefaults(config.flags(), report);
         validateEconomy(config.economy(), report);
         validateMapCache(config.mapCache(), report);
@@ -127,6 +128,17 @@ public final class UcsConfigValidators {
         }
         if (!roles.defaultRoleIds().contains(roles.bannedRoleId())) {
             report.error("roles.defaultRoleIds must include bannedRoleId " + roles.bannedRoleId());
+        }
+    }
+
+    private static void validateBans(
+            UcsConfigSnapshot.BanPolicy bans,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireAtLeast("bans.expulsionSearchRadiusBlocks", bans.expulsionSearchRadiusBlocks(), 8, report);
+        requireAtLeast("bans.expulsionCooldownTicks", bans.expulsionCooldownTicks(), 1, report);
+        if (!bans.preventEntry()) {
+            report.warning("Claim ban entry prevention is disabled; banned players can remain inside claims");
         }
     }
 

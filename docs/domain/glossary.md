@@ -26,6 +26,14 @@ A named claim-level permission group, such as owner, member, tenant, or visitor.
 
 A persisted invitation for a player to accept a claim role. Pending invites are not active role assignments until accepted and are used only when `roles.requireInviteAcceptance` is enabled.
 
+## Claim Ban
+
+A claim-level denial represented by the configured banned role. Bans take precedence over other role assignments and can trigger server-authoritative expulsion from the claim.
+
+## Expulsion
+
+A server-side movement action that sends a kicked or banned player to a safe same-dimension location outside the claim. Expulsion must not force-load chunks or loop indefinitely.
+
 ## Flag
 
 A typed protection rule key, such as `ucs:block_break` or `ucs:container_open`. Addons should use namespaced flag ids.

@@ -6,6 +6,7 @@ import com.nadirkhoulali.ucs.api.internal.DefaultUcsClaimService;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditService;
 import com.nadirkhoulali.ucs.claim.ClaimCreationService;
+import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
 import com.nadirkhoulali.ucs.claim.ClaimRoleService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
@@ -22,6 +23,7 @@ public final class UcsServices {
     private final UcsPermissionService permissionService = new UcsPermissionService();
     private final ClaimCreationService claimCreationService = new ClaimCreationService();
     private final ClaimChunkEditService claimChunkEditService = new ClaimChunkEditService();
+    private final ClaimExpulsionService claimExpulsionService = new ClaimExpulsionService();
     private final ClaimMetadataService claimMetadataService = new ClaimMetadataService();
     private final ClaimRoleService claimRoleService = new ClaimRoleService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
@@ -58,6 +60,10 @@ public final class UcsServices {
         return claimChunkEditService;
     }
 
+    public ClaimExpulsionService claimExpulsion() {
+        return claimExpulsionService;
+    }
+
     public ClaimMetadataService claimMetadata() {
         return claimMetadataService;
     }
@@ -72,6 +78,7 @@ public final class UcsServices {
 
     public synchronized void clearServerState() {
         claimTeleportService.clear();
+        claimExpulsionService.clear();
         this.claimRepository = null;
         this.claimService = null;
         UcsApiProvider.clearActiveAccess();

@@ -10,8 +10,13 @@ public record ClaimRoleRequest(
         UUID playerId,
         String playerName,
         ChunkKey chunk,
-        Instant requestedAt
+        Instant requestedAt,
+        boolean adminOverride
 ) {
+    public ClaimRoleRequest(UUID playerId, String playerName, ChunkKey chunk, Instant requestedAt) {
+        this(playerId, playerName, chunk, requestedAt, false);
+    }
+
     public ClaimRoleRequest {
         Objects.requireNonNull(playerId, "playerId");
         playerName = requireNonBlank(playerName, "playerName");

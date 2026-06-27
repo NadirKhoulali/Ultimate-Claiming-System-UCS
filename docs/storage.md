@@ -27,6 +27,8 @@ Saved claims persist display name, description, and an optional exact spawn posi
 
 Saved claims persist active `roleAssignments` and pending `pendingRoleInvites` as role-id to player-UUID sets. Pending invites are intentionally separate from assignments so protection checks only use accepted memberships.
 
+The configured banned role is stored in the same active role assignment map. Ban commands remove conflicting non-owner role grants before assigning the banned role.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.

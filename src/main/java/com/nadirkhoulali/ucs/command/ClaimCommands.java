@@ -12,10 +12,14 @@ import com.nadirkhoulali.ucs.claim.ClaimChunkEditResult;
 import com.nadirkhoulali.ucs.claim.ClaimCreationFailure;
 import com.nadirkhoulali.ucs.claim.ClaimCreationRequest;
 import com.nadirkhoulali.ucs.claim.ClaimCreationResult;
+import com.nadirkhoulali.ucs.claim.ClaimExpulsionResult;
+import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
+import com.nadirkhoulali.ucs.claim.ClaimExpulsionStatus;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataFailure;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataRequest;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataResult;
 import com.nadirkhoulali.ucs.claim.ClaimRoleFailure;
+import com.nadirkhoulali.ucs.claim.ClaimRoleAction;
 import com.nadirkhoulali.ucs.claim.ClaimRoleRequest;
 import com.nadirkhoulali.ucs.claim.ClaimRoleResult;
 import com.nadirkhoulali.ucs.claim.ClaimRoleTarget;
@@ -23,8 +27,12 @@ import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportStartResult;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.core.model.ChunkKey;
+import com.nadirkhoulali.ucs.core.model.Claim;
+import com.nadirkhoulali.ucs.core.model.ClaimOwnership;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
+import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.RoleId;
+import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import net.minecraft.commands.CommandSourceStack;
@@ -76,6 +84,15 @@ public final class ClaimCommands {
                                                 EntityArgument.getPlayer(context, "player"),
                                                 StringArgumentType.getString(context, "role")
                                         )))))
+                .then(Commands.literal("ban")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> ban(context, services, EntityArgument.getPlayer(context, "player")))))
+                .then(Commands.literal("unban")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> unban(context, services, EntityArgument.getPlayer(context, "player")))))
+                .then(Commands.literal("kick")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> kick(context, services, EntityArgument.getPlayer(context, "player")))))
                 .then(Commands.literal("invite")
                         .then(Commands.literal("accept").executes(context -> acceptInvite(context, services)))
                         .then(Commands.literal("decline").executes(context -> declineInvite(context, services))))
@@ -219,6 +236,68 @@ public final class ClaimCommands {
         ));
     }
 
+    private static int ban(CommandContext<CommandSourceStack> context, UcsServices services, ServerPlayer target) {
+        return updateRole(context, services, true, roleRequest -> services.claimRoles().banPlayer(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest,
+                roleTarget(target)
+        ));
+    }
+
+    private static int unban(CommandContext<CommandSourceStack> context, UcsServices services, ServerPlayer target) {
+        return updateRole(context, services, true, roleRequest -> services.claimRoles().unbanPlayer(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest,
+                roleTarget(target)
+        ));
+    }
+
+    private static int kick(CommandContext<CommandSourceStack> context, UcsServices services, ServerPlayer target) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.ucs.claim.player_only"));
+            return 0;
+        }
+        Optional<ClaimRepository> repository = services.claimRepository();
+        if (repository.isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+
+        ClaimRoleRequest request = roleRequest(player, services.permissions().has(player, UcsPermission.ADMIN));
+        Optional<Claim> claim = repository.orElseThrow().findByChunk(request.chunk());
+        if (claim.isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.edit.denied.no_claim", request.chunk().storageKey()));
+            return 0;
+        }
+        boolean canManageClaim = request.adminOverride()
+                || ClaimOwnership.isOwnedBy(claim.orElseThrow(), ClaimOwnership.player(request.playerId(), request.playerName()));
+        if (!canManageClaim) {
+            source.sendFailure(Component.translatable("command.ucs.claim.edit.denied.not_owner", request.chunk().storageKey()));
+            return 0;
+        }
+
+        ClaimExpulsionResult result = services.claimExpulsion().expelWithEvent(
+                target,
+                claim.orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                new FlagId("ucs:expel"),
+                "manual_kick"
+        );
+        if (result.status() != ClaimExpulsionStatus.EXPELLED) {
+            source.sendFailure(ClaimExpulsionService.expulsionFailureMessage(result));
+            return 0;
+        }
+
+        source.sendSuccess(() -> Component.translatable("command.ucs.claim.bans.kicked", target.getGameProfile().getName()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static int acceptInvite(CommandContext<CommandSourceStack> context, UcsServices services) {
         return updateRole(context, services, roleRequest -> services.claimRoles().acceptInvite(
                 services.claimRepository().orElseThrow(),
@@ -242,6 +321,15 @@ public final class ClaimCommands {
             UcsServices services,
             RoleCommand command
     ) {
+        return updateRole(context, services, false, command);
+    }
+
+    private static int updateRole(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            boolean allowAdminOverride,
+            RoleCommand command
+    ) {
         CommandSourceStack source = context.getSource();
         ServerPlayer player = source.getPlayer();
         if (player == null) {
@@ -253,14 +341,34 @@ public final class ClaimCommands {
             return 0;
         }
 
-        ClaimRoleResult result = command.execute(roleRequest(player));
+        ClaimRoleResult result = command.execute(roleRequest(player, allowAdminOverride && services.permissions().has(player, UcsPermission.ADMIN)));
         if (result.failure().isPresent()) {
             source.sendFailure(roleFailureMessage(result.failure().orElseThrow()));
             return 0;
         }
 
         source.sendSuccess(() -> roleSuccessMessage(result), false);
+        if (result.action() == ClaimRoleAction.BAN) {
+            expelBannedTargetIfPresent(player, services, result);
+        }
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static void expelBannedTargetIfPresent(ServerPlayer actor, UcsServices services, ClaimRoleResult result) {
+        result.target().ifPresent(target -> services.claimRepository().orElseThrow()
+                .findById(result.claim().orElseThrow().id())
+                .ifPresent(claim -> {
+                    ServerPlayer targetPlayer = actor.server.getPlayerList().getPlayer(target.playerId());
+                    if (targetPlayer != null) {
+                        services.claimExpulsion().expelWithEvent(
+                                targetPlayer,
+                                claim,
+                                UcsCommonConfig.snapshot(),
+                                new FlagId("ucs:expel"),
+                                "manual_ban"
+                        );
+                    }
+                }));
     }
 
     private static int rename(CommandContext<CommandSourceStack> context, UcsServices services, String name) {
@@ -427,12 +535,17 @@ public final class ClaimCommands {
     }
 
     private static ClaimRoleRequest roleRequest(ServerPlayer player) {
+        return roleRequest(player, false);
+    }
+
+    private static ClaimRoleRequest roleRequest(ServerPlayer player, boolean adminOverride) {
         ChunkPos chunkPos = new ChunkPos(player.blockPosition());
         return new ClaimRoleRequest(
                 player.getUUID(),
                 player.getGameProfile().getName(),
                 new ChunkKey(player.serverLevel().dimension().location().toString(), chunkPos.x, chunkPos.z),
-                Instant.now()
+                Instant.now(),
+                adminOverride
         );
     }
 
@@ -521,6 +634,8 @@ public final class ClaimCommands {
             case ASSIGN_ROLE -> result.pendingInvite()
                     ? Component.translatable("command.ucs.claim.roles.invited", target.playerName(), role, result.claim().orElseThrow().displayName())
                     : Component.translatable("command.ucs.claim.roles.assigned", target.playerName(), role, result.claim().orElseThrow().displayName());
+            case BAN -> Component.translatable("command.ucs.claim.bans.banned", target.playerName(), result.claim().orElseThrow().displayName());
+            case UNBAN -> Component.translatable("command.ucs.claim.bans.unbanned", target.playerName(), result.claim().orElseThrow().displayName());
             case UNTRUST -> Component.translatable("command.ucs.claim.roles.untrusted", target.playerName(), result.claim().orElseThrow().displayName());
             case ACCEPT_INVITE -> Component.translatable("command.ucs.claim.roles.accepted", role, result.claim().orElseThrow().displayName());
             case DECLINE_INVITE -> Component.translatable("command.ucs.claim.roles.declined", role, result.claim().orElseThrow().displayName());

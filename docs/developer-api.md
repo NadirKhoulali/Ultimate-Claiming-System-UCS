@@ -65,6 +65,12 @@ Built-in player commands can trust, untrust, assign configured roles, and accept
 
 `ClaimRoleResolver.effectiveRoles(...)` provides the first server-side role resolution helper for later protection, GUI, and marketplace systems. Banned roles take precedence over all other role assignments.
 
+## Bans And Expulsion
+
+The built-in banned role is the first hard-denial role. `/claim ban` assigns it and removes conflicting non-owner role grants; `/claim unban` clears it. `/claim kick` and automatic banned-entry prevention use `ClaimExpulsionService` to search for a safe same-dimension destination outside the claim.
+
+Expulsion decisions post `UcsProtectionDecisionEvent` with `ucs:entry` or `ucs:expel`, allowing addons to observe or override the movement decision before UCS teleports the player.
+
 ## Events
 
 Claim events live under `com.nadirkhoulali.ucs.api.event`:
