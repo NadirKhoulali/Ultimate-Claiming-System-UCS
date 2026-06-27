@@ -39,6 +39,7 @@ public final class UcsConfigValidators {
         validateRoleDefaults(config.roles(), report);
         validateBans(config.bans(), report);
         validateFlagDefaults(config.flags(), report);
+        validateProtection(config.protection(), report);
         validateEconomy(config.economy(), report);
         validateMapCache(config.mapCache(), report);
         validateAudit(config.audit(), report);
@@ -148,6 +149,20 @@ public final class UcsConfigValidators {
             UcsConfigValidationReport.Builder report
     ) {
         validateResourceList("flags.defaultProtectionFlagIds", flags.defaultProtectionFlagIds(), report);
+    }
+
+    private static void validateProtection(
+            UcsConfigSnapshot.ProtectionPolicy protection,
+            UcsConfigValidationReport.Builder report
+    ) {
+        validateResourceList("protection.ignoredBlockIds", protection.ignoredBlockIds(), report);
+        validateResourceList("protection.allowedBlockIds", protection.allowedBlockIds(), report);
+        validateResourceList("protection.specialBlockIds", protection.specialBlockIds(), report);
+        for (String ignored : protection.ignoredBlockIds()) {
+            if (protection.specialBlockIds().contains(ignored)) {
+                report.warning("Block " + ignored + " is both ignored and special; ignored takes precedence");
+            }
+        }
     }
 
     private static void validateEconomy(

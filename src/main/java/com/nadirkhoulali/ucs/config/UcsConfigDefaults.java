@@ -34,6 +34,16 @@ public final class UcsConfigDefaults {
             "ucs:liquid_flow"
     );
 
+    public static final List<String> DEFAULT_SPECIAL_BLOCK_IDS = List.of(
+            "minecraft:beacon",
+            "minecraft:conduit",
+            "minecraft:dragon_egg",
+            "minecraft:ender_chest",
+            "minecraft:respawn_anchor",
+            "minecraft:spawner",
+            "minecraft:vault"
+    );
+
     private UcsConfigDefaults() {
     }
 }

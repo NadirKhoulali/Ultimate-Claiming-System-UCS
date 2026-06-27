@@ -90,6 +90,8 @@ Typed protection flag API lives under `com.nadirkhoulali.ucs.api.protection`.
 
 Claim `flagOverrides` are the persisted per-claim enabled flag set. Config `flags.defaultProtectionFlagIds` decides which flags new claims start with; saved claim flags remain readable even if a later config changes the defaults.
 
+`ClaimProtectionService` is the first server-side protection service. Block break and place NeoForge events route through it, then through `ProtectionFlagEvaluator`, then through `UcsProtectionDecisionEvent` before the event is cancelled. The service uses `UcsClaimService` lookups and `ClaimView` role data rather than reading the repository directly.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.

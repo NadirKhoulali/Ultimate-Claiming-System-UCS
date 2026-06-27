@@ -37,6 +37,9 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.IntValue EXPULSION_COOLDOWN_TICKS;
 
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_PROTECTION_FLAG_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> IGNORED_BLOCK_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> ALLOWED_BLOCK_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> SPECIAL_BLOCK_IDS;
 
     public static final ModConfigSpec.BooleanValue ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS;
     public static final ModConfigSpec.DoubleValue STARTER_CLAIM_PRICE;
@@ -157,6 +160,18 @@ public final class UcsCommonConfig {
         DEFAULT_PROTECTION_FLAG_IDS = BUILDER
                 .comment("Default protection flag ids enabled for new claims.")
                 .defineListAllowEmpty("defaultProtectionFlagIds", UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS, () -> "", UcsConfigValidators::isResourceId);
+        BUILDER.pop();
+
+        BUILDER.push("protection");
+        IGNORED_BLOCK_IDS = BUILDER
+                .comment("Block ids ignored by build/break protection checks.")
+                .defineListAllowEmpty("ignoredBlockIds", List.of(), () -> "", UcsConfigValidators::isResourceId);
+        ALLOWED_BLOCK_IDS = BUILDER
+                .comment("Block ids always allowed by build/break protection checks even when a claim flag is enabled.")
+                .defineListAllowEmpty("allowedBlockIds", List.of(), () -> "", UcsConfigValidators::isResourceId);
+        SPECIAL_BLOCK_IDS = BUILDER
+                .comment("Block ids that use the stricter ucs:special_block_use flag for break protection.")
+                .defineListAllowEmpty("specialBlockIds", UcsConfigDefaults.DEFAULT_SPECIAL_BLOCK_IDS, () -> "", UcsConfigValidators::isResourceId);
         BUILDER.pop();
 
         BUILDER.push("economy");
@@ -283,6 +298,11 @@ public final class UcsCommonConfig {
                         EXPULSION_COOLDOWN_TICKS.get()
                 ),
                 new UcsConfigSnapshot.FlagDefaults(List.copyOf(DEFAULT_PROTECTION_FLAG_IDS.get())),
+                new UcsConfigSnapshot.ProtectionPolicy(
+                        List.copyOf(IGNORED_BLOCK_IDS.get()),
+                        List.copyOf(ALLOWED_BLOCK_IDS.get()),
+                        List.copyOf(SPECIAL_BLOCK_IDS.get())
+                ),
                 new UcsConfigSnapshot.EconomyPolicy(
                         ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS.get(),
                         STARTER_CLAIM_PRICE.get(),

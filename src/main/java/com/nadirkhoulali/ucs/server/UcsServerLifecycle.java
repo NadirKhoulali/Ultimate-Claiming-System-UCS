@@ -10,10 +10,14 @@ import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 
 public final class UcsServerLifecycle {
     private final UcsServices services;
@@ -74,5 +78,56 @@ public final class UcsServerLifecycle {
             services.claimTeleport().tick(event.getServer(), repository, config);
             services.claimExpulsion().tick(event.getServer(), repository, config);
         });
+    }
+
+    @SubscribeEvent
+    public void onBlockBreak(BlockEvent.BreakEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkBlockBreak(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                event.getState(),
+                event.getPlayer()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            sendProtectionDenial(event.getPlayer(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onBlockPlace(BlockEvent.EntityPlaceEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkBlockPlace(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                event.getPlacedBlock(),
+                event.getEntity()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            if (event.getEntity() instanceof Player player) {
+                sendProtectionDenial(player, config, decision.flagId().value(), decision.reason());
+            }
+        }
+    }
+
+    private static void sendProtectionDenial(Player player, UcsConfigSnapshot config, String flagId, String reason) {
+        player.displayClientMessage(
+                Component.translatable("command.ucs.protection.denied", flagId, reason),
+                config.messages().sendActionBarDenials()
+        );
     }
 }

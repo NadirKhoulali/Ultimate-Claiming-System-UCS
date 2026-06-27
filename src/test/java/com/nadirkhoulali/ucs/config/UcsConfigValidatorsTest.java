@@ -43,6 +43,7 @@ class UcsConfigValidatorsTest {
                 base.roles(),
                 base.bans(),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -71,6 +72,7 @@ class UcsConfigValidatorsTest {
                 base.roles(),
                 base.bans(),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -99,6 +101,7 @@ class UcsConfigValidatorsTest {
                 base.roles(),
                 base.bans(),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -127,6 +130,7 @@ class UcsConfigValidatorsTest {
                 new UcsConfigSnapshot.RoleDefaults(List.of("owner", "visitor"), "member", "banned", false),
                 base.bans(),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -156,6 +160,7 @@ class UcsConfigValidatorsTest {
                 base.roles(),
                 new UcsConfigSnapshot.BanPolicy(true, 1, 40),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -184,6 +189,7 @@ class UcsConfigValidatorsTest {
                 base.roles(),
                 base.bans(),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -197,6 +203,39 @@ class UcsConfigValidatorsTest {
 
         assertFalse(report.valid());
         assertTrue(report.errors().stream().anyMatch(error -> error.contains("archive.retentionDays")));
+    }
+
+    @Test
+    void warnsWhenIgnoredBlockIsAlsoSpecial() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
+                base.roles(),
+                base.bans(),
+                base.flags(),
+                new UcsConfigSnapshot.ProtectionPolicy(
+                        List.of("minecraft:beacon"),
+                        List.of(),
+                        List.of("minecraft:beacon")
+                ),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                base.archive(),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        UcsConfigValidationReport report = snapshot.validate();
+
+        assertTrue(report.valid());
+        assertTrue(report.warnings().stream().anyMatch(warning -> warning.contains("both ignored and special")));
     }
 
     @Test
@@ -222,6 +261,7 @@ class UcsConfigValidatorsTest {
                 base.roles(),
                 base.bans(),
                 base.flags(),
+                base.protection(),
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
@@ -247,6 +287,7 @@ class UcsConfigValidatorsTest {
                 new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", false),
                 new UcsConfigSnapshot.BanPolicy(true, 48, 40),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
+                new UcsConfigSnapshot.ProtectionPolicy(List.of(), List.of(), UcsConfigDefaults.DEFAULT_SPECIAL_BLOCK_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),
                 new UcsConfigSnapshot.AuditPolicy(true, 250, 180),

@@ -15,6 +15,7 @@ public record UcsConfigSnapshot(
         RoleDefaults roles,
         BanPolicy bans,
         FlagDefaults flags,
+        ProtectionPolicy protection,
         EconomyPolicy economy,
         MapCachePolicy mapCache,
         AuditPolicy audit,
@@ -86,6 +87,18 @@ public record UcsConfigSnapshot(
     public record FlagDefaults(List<String> defaultProtectionFlagIds) {
         public FlagDefaults {
             defaultProtectionFlagIds = List.copyOf(defaultProtectionFlagIds);
+        }
+    }
+
+    public record ProtectionPolicy(
+            List<String> ignoredBlockIds,
+            List<String> allowedBlockIds,
+            List<String> specialBlockIds
+    ) {
+        public ProtectionPolicy {
+            ignoredBlockIds = List.copyOf(ignoredBlockIds);
+            allowedBlockIds = List.copyOf(allowedBlockIds);
+            specialBlockIds = List.copyOf(specialBlockIds);
         }
     }
 

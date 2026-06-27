@@ -38,6 +38,10 @@ A server-side movement action that sends a kicked or banned player to a safe sam
 
 A typed protection rule key, such as `ucs:block_break` or `ucs:container_open`. A flag definition includes display name, category, default decision, applicable roles, and actor requirements. Addons should use namespaced flag ids.
 
+## Special Block
+
+A configured block id whose destruction uses a stricter protection flag than ordinary block breaking. Special blocks are intended for high-value or grief-sensitive blocks such as beacons, spawners, and vaults.
+
 ## Lease
 
 A tenant contract that grants a tenant role on a claim for a time window. Lease is separate from tax: rent is paid by a tenant, while tax/upkeep is paid by an owner to the server sink.

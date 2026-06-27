@@ -65,6 +65,12 @@ Default flag ids are namespaced with `ucs:`. Addons should also use namespaced i
 
 `flags.defaultProtectionFlagIds` seeds new claims with enabled per-claim flags. It is not the full built-in registry; UCS also registers placeholders for later block, interaction, container, entity, item, combat, environment, redstone, mob, and movement protections.
 
+Block build/break protection also has block-id policy lists:
+
+- `protection.ignoredBlockIds` skips UCS block protection checks for matching block ids.
+- `protection.allowedBlockIds` always allows matching blocks even when a claim flag is enabled.
+- `protection.specialBlockIds` uses `ucs:special_block_use` instead of ordinary `ucs:block_break` for destruction checks. Defaults include high-value blocks such as beacons, conduits, dragon eggs, ender chests, respawn anchors, spawners, and vaults.
+
 ## Economy
 
 Economy defaults are enabled when a compatible provider exists:

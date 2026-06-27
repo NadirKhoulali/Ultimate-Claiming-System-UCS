@@ -14,6 +14,7 @@ import com.nadirkhoulali.ucs.storage.UcsClaimsSavedData;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -118,6 +119,7 @@ class DefaultUcsClaimServiceTest {
                 new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", false),
                 new UcsConfigSnapshot.BanPolicy(true, 48, 40),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
+                new UcsConfigSnapshot.ProtectionPolicy(List.of(), List.of(), UcsConfigDefaults.DEFAULT_SPECIAL_BLOCK_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),
                 new UcsConfigSnapshot.AuditPolicy(true, 250, 180),
