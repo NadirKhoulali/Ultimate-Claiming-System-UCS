@@ -21,12 +21,27 @@ public final class UcsCommands {
         dispatcher.register(Commands.literal("ucs")
                 .executes(UcsCommands::showAbout)
                 .then(Commands.literal("about").executes(UcsCommands::showAbout))
+                .then(Commands.literal("help").executes(UcsCommands::showHelp))
                 .then(Commands.literal("version").executes(UcsCommands::showVersion))
                 .then(Commands.literal("permissions").executes(context -> showPermissions(context, services))));
     }
 
     private static int showAbout(CommandContext<CommandSourceStack> context) {
         context.getSource().sendSuccess(() -> Component.translatable("command.ucs.about"), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int showHelp(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.header"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.version"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.permissions"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_radius"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_add"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_remove"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_split"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_merge"), false);
         return Command.SINGLE_SUCCESS;
     }
 
