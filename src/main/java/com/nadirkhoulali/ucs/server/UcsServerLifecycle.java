@@ -104,6 +104,7 @@ public final class UcsServerLifecycle {
     @SubscribeEvent
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         services.protectionAdmin().clearPlayer(event.getEntity().getUUID());
+        services.terrainTileStreams().clearPlayer(event.getEntity().getUUID());
     }
 
     @SubscribeEvent

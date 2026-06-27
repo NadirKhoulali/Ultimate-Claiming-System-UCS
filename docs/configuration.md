@@ -149,6 +149,8 @@ The file cache stores `.ucstile` files outside SavedData using the versioned pat
 
 Terrain tile generation is bounded by the same map-cache job/request limits and samples only chunks that are already loaded by the server. Unknown areas are encoded into the tile payload instead of forcing worldgen.
 
+Tile streaming also uses `mapCache.maxTileRequestsPerPlayer` and `mapCache.maxGlobalTileJobs` to cap each client request batch. Requests above the effective limit receive rate-limited tile responses instead of being queued unboundedly. Clients may send cancellation payloads when the player pans or zooms away from an older request.
+
 ## Audit And Purge
 
 Audit logging is enabled by default. Archive retention defaults to `archive.retentionDays = 365`; old archive records are pruned when new archives are created. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.

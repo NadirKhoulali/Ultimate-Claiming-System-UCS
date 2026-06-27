@@ -19,6 +19,7 @@ import com.nadirkhoulali.ucs.claim.ClaimTaxService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.economy.DefaultClaimEconomyProviderRegistry;
 import com.nadirkhoulali.ucs.map.TerrainTileGenerator;
+import com.nadirkhoulali.ucs.map.TerrainTileStreamService;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import com.nadirkhoulali.ucs.protection.DefaultProtectionFlagRegistry;
@@ -49,6 +50,7 @@ public final class UcsServices {
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
     private final TerrainTileGenerator terrainTileGenerator = new TerrainTileGenerator();
+    private final TerrainTileStreamService terrainTileStreamService = new TerrainTileStreamService();
     private final ProtectionFlagRegistry protectionFlags = DefaultProtectionFlagRegistry.withBuiltIns();
     private final ClaimEconomyProviderRegistry economyProviders = DefaultClaimEconomyProviderRegistry.withBuiltIns();
     private ClaimRepository claimRepository;
@@ -144,12 +146,17 @@ public final class UcsServices {
         return terrainTileGenerator;
     }
 
+    public TerrainTileStreamService terrainTileStreams() {
+        return terrainTileStreamService;
+    }
+
     public synchronized void clearServerState() {
         claimTeleportService.clear();
         claimExpulsionService.clear();
         claimLeaseService.clear();
         claimTaxService.clear();
         claimNonpaymentService.clear();
+        terrainTileStreamService.clear();
         claimMovementService.clear();
         protectionAdminService.clear();
         this.claimRepository = null;

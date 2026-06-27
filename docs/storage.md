@@ -55,6 +55,8 @@ Terrain map tiles are stored outside SavedData by `FileMapTileCache`. The cache 
 
 Terrain generation writes cache payloads only after server-thread sampling has copied loaded chunk data into immutable snapshots. UCS uses `getChunkNow` for the built-in sampler, so map browsing cannot create new chunks. Unloaded or unavailable chunks render as the unknown color in the cached payload.
 
+Tile streaming reads from the file cache first and generates on cache misses. Missing dimensions, failed generation, cancelled requests, and rate-limited tiles produce explicit placeholder/control responses rather than blocking the client.
+
 ## Versioning
 
 `UcsClaimsSavedData` stores a `storageVersion`. Current version is `1`. Newer data is loaded best-effort with a warning; future migrations should be added before changing the version.

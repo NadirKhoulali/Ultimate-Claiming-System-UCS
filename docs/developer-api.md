@@ -171,6 +171,8 @@ The file-backed terrain cache lives in `com.nadirkhoulali.ucs.map`. `FileMapTile
 
 `TerrainTileGenerator` renders 128x128 terrain payloads from immutable `TerrainChunkSnapshot` objects and writes them to `FileMapTileCache`. Live Minecraft access is isolated behind `TerrainChunkSampler`; `LoadedServerTerrainChunkSampler` uses `ServerChunkCache#getChunkNow(...)`, so sampling loaded chunks does not request, load, or generate terrain. Missing chunks render as the unknown color and can be regenerated later when chunks are loaded.
 
+Tile streaming uses NeoForge play payloads under `com.nadirkhoulali.ucs.network`: `TerrainTileRequestPayload`, `TerrainTileCancelPayload`, and `TerrainTileResponsePayload`. `TerrainTileStreamService` enforces `mapCache.maxTileRequestsPerPlayer` and `mapCache.maxGlobalTileJobs` per batch, supports cancellation by request id, and returns explicit statuses (`HIT`, `GENERATED`, `PLACEHOLDER`, `RATE_LIMITED`, `CANCELLED`, `ERROR`). Client-bound payloads compress tile bytes only when compression reduces the transfer size.
+
 ## Events
 
 Claim events live under `com.nadirkhoulali.ucs.api.event`:
