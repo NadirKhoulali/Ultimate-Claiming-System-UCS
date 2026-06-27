@@ -64,6 +64,11 @@ public final class UcsTerrainMapScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // The terrain map draws its own full-screen backdrop; keep vanilla's world blur off it.
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && insideMap(mouseX, mouseY)) {
             selectedClaimId = overlayAt(mouseX, mouseY, mapBounds())
@@ -255,7 +260,7 @@ public final class UcsTerrainMapScreen extends Screen {
     }
 
     private void drawTerrainPayload(GuiGraphics graphics, MapBounds mapBounds, UcsTerrainMapViewport.TileBounds tileBounds, TerrainTilePayload payload) {
-        int sampleStep = Math.max(1, payload.size() / 32);
+        int sampleStep = Math.max(1, payload.size() / 64);
         double cellScale = tileBounds.width() / (double) payload.size();
         int[] colors = payload.argb();
         for (int z = 0; z < payload.size(); z += sampleStep) {
