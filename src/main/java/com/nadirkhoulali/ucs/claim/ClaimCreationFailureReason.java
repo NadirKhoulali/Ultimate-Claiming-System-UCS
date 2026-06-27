@@ -7,5 +7,6 @@ public enum ClaimCreationFailureReason {
     TOO_MANY_CLAIMS,
     TOO_MANY_CHUNKS,
     OVERLAP,
+    PAYMENT_FAILED,
     SAVE_FAILED
 }

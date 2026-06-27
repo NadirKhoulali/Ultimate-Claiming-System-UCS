@@ -90,6 +90,16 @@ The economy provider registry is exposed through the public API. UCS currently i
 
 Claim pricing enforcement is built on top of this provider SPI in later economy slices. The SPI already supports balance validation, charge, refund, transfer, provider transaction references, and formatted amounts.
 
+Claim creation and chunk editing now use the active provider when `enableWhenProviderExists` is true and a provider is available:
+
+- New claims charge `starterClaimPrice + pricePerExtraChunk * (selectedChunks - 1)` before the claim is saved.
+- Radius claims calculate the full square selection price before creating any claim state.
+- Adding a chunk charges `pricePerExtraChunk` before saving the expanded claim.
+- Removing or splitting out a chunk refunds `pricePerExtraChunk * unclaimRefundRatio` after the claim edit succeeds.
+- Whole-claim refund calculation is available to future unclaim flows as `creationValue * unclaimRefundRatio`.
+
+Economy transaction references are stable strings such as `UCS_CLAIM_CREATE`, `UCS_CHUNK_ADD`, `UCS_CHUNK_REMOVE_REFUND`, and rollback references for save failures after payment.
+
 ## Map Cache
 
 Map terrain tiles are configured separately from claim SavedData. The default cache size is `1024 MiB`, with request/job limits to protect large servers.

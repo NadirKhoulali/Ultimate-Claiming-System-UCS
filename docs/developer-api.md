@@ -139,6 +139,8 @@ The UBS adapter does not compile against UBS. It reflectively calls `UltimateBan
 
 Server-ledger refs are treated as external sinks/sources for `charge`, `refund`, and `transfer` where possible. Direct server-ledger balances are unsupported until a provider exposes a durable server account concept.
 
+Claim and chunk pricing uses `ClaimPricingService` internally. Payment failure on claim creation or chunk add returns `PAYMENT_FAILED` and leaves claim state unchanged. If a save fails after a successful charge, UCS attempts a rollback refund and includes that refund result in the command result. Remove/split refunds occur after the claim edit succeeds and are reflected in the returned audit detail with the provider transaction reference when one exists.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.

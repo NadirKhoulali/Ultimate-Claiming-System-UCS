@@ -2,6 +2,9 @@ package com.nadirkhoulali.ucs.claim;
 
 import com.nadirkhoulali.ucs.api.ClaimView;
 import com.nadirkhoulali.ucs.api.UcsClaimService;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyAccountRef;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyProvider;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyResult;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.AuditAction;
 import com.nadirkhoulali.ucs.core.model.AuditEntry;
@@ -17,6 +20,7 @@ import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.ClaimRepositoryException;
 
+import java.math.BigDecimal;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -27,11 +31,23 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class ClaimCreationService {
+    private final ClaimPricingService pricing = new ClaimPricingService();
+
     public ClaimCreationResult createPlayerClaim(
             ClaimRepository repository,
             UcsClaimService claimService,
             UcsConfigSnapshot config,
             ClaimCreationRequest request
+    ) {
+        return createPlayerClaim(repository, claimService, config, request, null);
+    }
+
+    public ClaimCreationResult createPlayerClaim(
+            ClaimRepository repository,
+            UcsClaimService claimService,
+            UcsConfigSnapshot config,
+            ClaimCreationRequest request,
+            ClaimEconomyProvider economyProvider
     ) {
         Objects.requireNonNull(repository, "repository");
         Objects.requireNonNull(claimService, "claimService");
@@ -44,6 +60,15 @@ public final class ClaimCreationService {
         Optional<ClaimCreationFailure> validationFailure = validate(repository, config, request, selectedChunks);
         if (validationFailure.isPresent()) {
             return ClaimCreationResult.failure(validationFailure.orElseThrow(), selectedChunkCount);
+        }
+
+        ClaimEconomyResult economyCharge = chargeIfNeeded(config, request, economyProvider, selectedChunkCount);
+        if (economyCharge != null && !economyCharge.success()) {
+            return ClaimCreationResult.failure(
+                    ClaimCreationFailure.simple(ClaimCreationFailureReason.PAYMENT_FAILED, economyCharge.userMessage()),
+                    selectedChunkCount,
+                    economyCharge
+            );
         }
 
         PlayerOwner owner = ClaimOwnership.player(request.playerId(), request.playerName());
@@ -65,13 +90,21 @@ public final class ClaimCreationService {
                     AuditAction.CLAIM_CREATED,
                     Optional.of(saved.id()),
                     "created " + selectedChunkCount + " chunks centered at " + request.center().storageKey()
+                            + economyAuditSuffix(economyCharge)
             );
-            return ClaimCreationResult.success(saved, auditEntry, selectedChunkCount);
+            return economyCharge == null
+                    ? ClaimCreationResult.success(saved, auditEntry, selectedChunkCount)
+                    : ClaimCreationResult.success(saved, auditEntry, selectedChunkCount, economyCharge);
         } catch (ClaimRepositoryException exception) {
-            return ClaimCreationResult.failure(
-                    ClaimCreationFailure.simple(ClaimCreationFailureReason.SAVE_FAILED, exceptionDetail(exception)),
-                    selectedChunkCount
+            ClaimEconomyResult rollback = refundClaimCreateRollback(config, request, economyProvider, selectedChunkCount, economyCharge);
+            ClaimCreationFailure failure = ClaimCreationFailure.simple(
+                    ClaimCreationFailureReason.SAVE_FAILED,
+                    exceptionDetail(exception) + rollbackDetail(rollback)
             );
+            ClaimEconomyResult economyResult = rollback == null ? economyCharge : rollback;
+            return economyResult == null
+                    ? ClaimCreationResult.failure(failure, selectedChunkCount)
+                    : ClaimCreationResult.failure(failure, selectedChunkCount, economyResult);
         }
     }
 
@@ -157,6 +190,68 @@ public final class ClaimCreationService {
         return config.flags().defaultProtectionFlagIds().stream()
                 .map(FlagId::new)
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private ClaimEconomyResult chargeIfNeeded(
+            UcsConfigSnapshot config,
+            ClaimCreationRequest request,
+            ClaimEconomyProvider economyProvider,
+            int chunkCount
+    ) {
+        if (!pricing.economyActive(config, economyProvider)) {
+            return null;
+        }
+        BigDecimal price = pricing.claimCreationPrice(config, chunkCount);
+        if (!pricing.shouldTransact(price)) {
+            return null;
+        }
+        ClaimEconomyAccountRef payer = ClaimEconomyAccountRef.playerPrimary(request.playerId());
+        ClaimEconomyResult validation = economyProvider.validateCanCharge(payer, price);
+        if (!validation.success()) {
+            return validation;
+        }
+        return economyProvider.charge(payer, price, ClaimPricingService.REF_CLAIM_CREATE);
+    }
+
+    private ClaimEconomyResult refundClaimCreateRollback(
+            UcsConfigSnapshot config,
+            ClaimCreationRequest request,
+            ClaimEconomyProvider economyProvider,
+            int chunkCount,
+            ClaimEconomyResult economyCharge
+    ) {
+        if (economyCharge == null || !economyCharge.success() || !pricing.economyActive(config, economyProvider)) {
+            return null;
+        }
+        BigDecimal price = pricing.claimCreationPrice(config, chunkCount);
+        if (!pricing.shouldTransact(price)) {
+            return null;
+        }
+        return economyProvider.refund(
+                ClaimEconomyAccountRef.playerPrimary(request.playerId()),
+                price,
+                ClaimPricingService.REF_CLAIM_CREATE_ROLLBACK
+        );
+    }
+
+    private static String economyAuditSuffix(ClaimEconomyResult economyCharge) {
+        if (economyCharge == null || !economyCharge.success()) {
+            return "";
+        }
+        String reference = economyCharge.providerReference().isBlank()
+                ? ""
+                : " ref " + economyCharge.providerReference();
+        return "; charged " + economyCharge.formattedAmount() + reference;
+    }
+
+    private static String rollbackDetail(ClaimEconomyResult rollback) {
+        if (rollback == null) {
+            return "";
+        }
+        if (rollback.success()) {
+            return "; payment rollback refunded " + rollback.formattedAmount();
+        }
+        return "; payment rollback failed: " + rollback.userMessage();
     }
 
     private static String exceptionDetail(RuntimeException exception) {

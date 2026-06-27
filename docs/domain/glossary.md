@@ -78,6 +78,10 @@ A recurring owner-side upkeep or server surcharge. Tax money goes to the configu
 
 An optional integration that performs balance checks, charges, refunds, transfers, and money formatting for UCS. `ucs:none` is the fallback when no provider is available; `ubs` is the built-in soft adapter for Ultimate Banking System.
 
+## Claim Value
+
+The configured economic value of land. New claims use starter price plus extra chunk price, added chunks use extra chunk price, and removals refund the configured refund ratio.
+
 ## Audit Entry
 
 A durable record of an admin, economy, or claim-management action. Audit entries are used for debugging, abuse review, and admin console history.

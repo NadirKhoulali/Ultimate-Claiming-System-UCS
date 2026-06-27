@@ -3,6 +3,9 @@ package com.nadirkhoulali.ucs.claim;
 import com.nadirkhoulali.ucs.api.ClaimArchiveView;
 import com.nadirkhoulali.ucs.api.ClaimView;
 import com.nadirkhoulali.ucs.api.UcsClaimService;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyAccountRef;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyProvider;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyResult;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.ArchiveId;
 import com.nadirkhoulali.ucs.core.model.AuditAction;
@@ -17,6 +20,7 @@ import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.ClaimRepositoryException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -32,11 +36,23 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class ClaimChunkEditService {
+    private final ClaimPricingService pricing = new ClaimPricingService();
+
     public ClaimChunkEditResult addChunk(
             ClaimRepository repository,
             UcsClaimService claimService,
             UcsConfigSnapshot config,
             ClaimChunkEditRequest request
+    ) {
+        return addChunk(repository, claimService, config, request, null);
+    }
+
+    public ClaimChunkEditResult addChunk(
+            ClaimRepository repository,
+            UcsClaimService claimService,
+            UcsConfigSnapshot config,
+            ClaimChunkEditRequest request,
+            ClaimEconomyProvider economyProvider
     ) {
         Objects.requireNonNull(repository, "repository");
         Objects.requireNonNull(claimService, "claimService");
@@ -67,21 +83,44 @@ public final class ClaimChunkEditService {
             return ClaimChunkEditResult.failure(ClaimChunkEditAction.ADD, limitFailure.orElseThrow(), Set.of(request.chunk()));
         }
 
-        return saveSingle(
+        ClaimEconomyResult economyCharge = chargeChunkAddIfNeeded(config, request, economyProvider);
+        if (economyCharge != null && !economyCharge.success()) {
+            return failure(
+                    ClaimChunkEditAction.ADD,
+                    ClaimChunkEditFailureReason.PAYMENT_FAILED,
+                    economyCharge.userMessage(),
+                    request.chunk(),
+                    economyCharge
+            );
+        }
+
+        ClaimChunkEditResult result = saveSingle(
                 ClaimChunkEditAction.ADD,
                 claimService,
                 withChunks(target, updatedChunks, request.requestedAt(), target.metadata().displayName()),
                 owner,
                 request.requestedAt(),
                 Set.of(request.chunk()),
-                "added chunk " + request.chunk().storageKey()
+                "added chunk " + request.chunk().storageKey() + economyAuditSuffix("charged", economyCharge),
+                economyCharge
         );
+        return rollbackChunkAddOnSaveFailure(result, config, request, economyProvider, economyCharge);
     }
 
     public ClaimChunkEditResult removeChunk(
             ClaimRepository repository,
             UcsClaimService claimService,
             ClaimChunkEditRequest request
+    ) {
+        return removeChunk(repository, claimService, null, request, null);
+    }
+
+    public ClaimChunkEditResult removeChunk(
+            ClaimRepository repository,
+            UcsClaimService claimService,
+            UcsConfigSnapshot config,
+            ClaimChunkEditRequest request,
+            ClaimEconomyProvider economyProvider
     ) {
         Optional<Claim> claim = repository.findByChunk(request.chunk());
         if (claim.isEmpty()) {
@@ -101,7 +140,7 @@ public final class ClaimChunkEditService {
             return failure(ClaimChunkEditAction.REMOVE, ClaimChunkEditFailureReason.WOULD_SPLIT, request.chunk().storageKey(), request.chunk());
         }
 
-        return saveSingle(
+        ClaimChunkEditResult result = saveSingle(
                 ClaimChunkEditAction.REMOVE,
                 claimService,
                 withChunks(claim.orElseThrow(), remaining, request.requestedAt(), claim.orElseThrow().metadata().displayName()),
@@ -110,12 +149,23 @@ public final class ClaimChunkEditService {
                 Set.of(request.chunk()),
                 "removed chunk " + request.chunk().storageKey()
         );
+        return refundRemovedChunkIfNeeded(result, config, request, economyProvider, ClaimPricingService.REF_CHUNK_REMOVE_REFUND);
     }
 
     public ClaimChunkEditResult splitClaim(
             ClaimRepository repository,
             UcsClaimService claimService,
             ClaimChunkEditRequest request
+    ) {
+        return splitClaim(repository, claimService, null, request, null);
+    }
+
+    public ClaimChunkEditResult splitClaim(
+            ClaimRepository repository,
+            UcsClaimService claimService,
+            UcsConfigSnapshot config,
+            ClaimChunkEditRequest request,
+            ClaimEconomyProvider economyProvider
     ) {
         Optional<Claim> original = repository.findByChunk(request.chunk());
         if (original.isEmpty()) {
@@ -134,7 +184,7 @@ public final class ClaimChunkEditService {
 
         List<Set<ClaimChunk>> components = ClaimShape.connectedComponents(remaining);
         if (components.size() == 1) {
-            return saveSingle(
+            ClaimChunkEditResult result = saveSingle(
                     ClaimChunkEditAction.SPLIT,
                     claimService,
                     withChunks(original.orElseThrow(), remaining, request.requestedAt(), original.orElseThrow().metadata().displayName()),
@@ -143,6 +193,7 @@ public final class ClaimChunkEditService {
                     Set.of(request.chunk()),
                     "removed chunk " + request.chunk().storageKey()
             );
+            return refundRemovedChunkIfNeeded(result, config, request, economyProvider, ClaimPricingService.REF_CHUNK_SPLIT_REFUND);
         }
 
         List<Claim> splitClaims = splitClaims(original.orElseThrow(), components, request.requestedAt());
@@ -160,12 +211,13 @@ public final class ClaimChunkEditService {
             for (Claim splitClaim : splitClaims) {
                 saved.add(claimService.saveClaim(splitClaim));
             }
-            return ClaimChunkEditResult.success(
+            ClaimChunkEditResult result = ClaimChunkEditResult.success(
                     ClaimChunkEditAction.SPLIT,
                     saved,
                     audit(owner, request.requestedAt(), saved.getFirst().id(), "split claim after removing " + request.chunk().storageKey()),
                     affectedChunks
             );
+            return refundRemovedChunkIfNeeded(result, config, request, economyProvider, ClaimPricingService.REF_CHUNK_SPLIT_REFUND);
         } catch (RuntimeException exception) {
             rollbackSplit(claimService, splitClaims);
             if (archivedOriginal != null) {
@@ -245,14 +297,35 @@ public final class ClaimChunkEditService {
             Set<ChunkKey> affectedChunks,
             String auditDetail
     ) {
+        return saveSingle(action, claimService, claim, owner, requestedAt, affectedChunks, auditDetail, null);
+    }
+
+    private ClaimChunkEditResult saveSingle(
+            ClaimChunkEditAction action,
+            UcsClaimService claimService,
+            Claim claim,
+            PlayerOwner owner,
+            Instant requestedAt,
+            Set<ChunkKey> affectedChunks,
+            String auditDetail,
+            ClaimEconomyResult economyResult
+    ) {
         try {
             ClaimView saved = claimService.saveClaim(claim);
-            return ClaimChunkEditResult.success(
-                    action,
-                    List.of(saved),
-                    audit(owner, requestedAt, saved.id(), auditDetail),
-                    affectedChunks
-            );
+            return economyResult == null
+                    ? ClaimChunkEditResult.success(
+                            action,
+                            List.of(saved),
+                            audit(owner, requestedAt, saved.id(), auditDetail),
+                            affectedChunks
+                    )
+                    : ClaimChunkEditResult.success(
+                            action,
+                            List.of(saved),
+                            audit(owner, requestedAt, saved.id(), auditDetail),
+                            economyResult,
+                            affectedChunks
+                    );
         } catch (ClaimRepositoryException exception) {
             return ClaimChunkEditResult.failure(
                     action,
@@ -287,6 +360,127 @@ public final class ClaimChunkEditService {
             ));
         }
         return Optional.empty();
+    }
+
+    private ClaimEconomyResult chargeChunkAddIfNeeded(
+            UcsConfigSnapshot config,
+            ClaimChunkEditRequest request,
+            ClaimEconomyProvider economyProvider
+    ) {
+        if (config == null || !pricing.economyActive(config, economyProvider)) {
+            return null;
+        }
+        BigDecimal price = pricing.chunkAddPrice(config, 1);
+        if (!pricing.shouldTransact(price)) {
+            return null;
+        }
+        ClaimEconomyAccountRef payer = ClaimEconomyAccountRef.playerPrimary(request.playerId());
+        ClaimEconomyResult validation = economyProvider.validateCanCharge(payer, price);
+        if (!validation.success()) {
+            return validation;
+        }
+        return economyProvider.charge(payer, price, ClaimPricingService.REF_CHUNK_ADD);
+    }
+
+    private ClaimChunkEditResult rollbackChunkAddOnSaveFailure(
+            ClaimChunkEditResult result,
+            UcsConfigSnapshot config,
+            ClaimChunkEditRequest request,
+            ClaimEconomyProvider economyProvider,
+            ClaimEconomyResult economyCharge
+    ) {
+        if (result.failure().isEmpty()
+                || economyCharge == null
+                || !economyCharge.success()
+                || config == null
+                || !pricing.economyActive(config, economyProvider)) {
+            return result;
+        }
+        BigDecimal price = pricing.chunkAddPrice(config, 1);
+        ClaimEconomyResult rollback = economyProvider.refund(
+                ClaimEconomyAccountRef.playerPrimary(request.playerId()),
+                price,
+                ClaimPricingService.REF_CHUNK_ADD_ROLLBACK
+        );
+        ClaimChunkEditFailure failure = result.failure().orElseThrow();
+        String detail = failure.detail() + rollbackDetail(rollback);
+        return ClaimChunkEditResult.failure(
+                result.action(),
+                new ClaimChunkEditFailure(failure.reason(), detail),
+                rollback,
+                result.affectedChunks()
+        );
+    }
+
+    private ClaimChunkEditResult refundRemovedChunkIfNeeded(
+            ClaimChunkEditResult result,
+            UcsConfigSnapshot config,
+            ClaimChunkEditRequest request,
+            ClaimEconomyProvider economyProvider,
+            String reference
+    ) {
+        if (result.failure().isPresent()
+                || config == null
+                || !pricing.economyActive(config, economyProvider)) {
+            return result;
+        }
+        BigDecimal refund = pricing.removedChunkRefund(config, 1);
+        if (!pricing.shouldTransact(refund)) {
+            return result;
+        }
+        ClaimEconomyResult economyResult = economyProvider.refund(
+                ClaimEconomyAccountRef.playerPrimary(request.playerId()),
+                refund,
+                reference
+        );
+        return withEconomyAudit(result, economyResult);
+    }
+
+    private static String economyAuditSuffix(String verb, ClaimEconomyResult economyResult) {
+        if (economyResult == null || !economyResult.success()) {
+            return "";
+        }
+        String reference = economyResult.providerReference().isBlank()
+                ? ""
+                : " ref " + economyResult.providerReference();
+        return "; " + verb + " " + economyResult.formattedAmount() + reference;
+    }
+
+    private static ClaimChunkEditResult withEconomyAudit(
+            ClaimChunkEditResult result,
+            ClaimEconomyResult economyResult
+    ) {
+        AuditEntry auditEntry = result.auditEntry().orElseThrow();
+        String detail = auditEntry.detail() + refundAuditSuffix(economyResult);
+        AuditEntry updatedAudit = new AuditEntry(
+                auditEntry.id(),
+                auditEntry.occurredAt(),
+                auditEntry.actorKey(),
+                auditEntry.action(),
+                auditEntry.claimId(),
+                detail
+        );
+        return ClaimChunkEditResult.success(
+                result.action(),
+                result.claims(),
+                updatedAudit,
+                economyResult,
+                result.affectedChunks()
+        );
+    }
+
+    private static String refundAuditSuffix(ClaimEconomyResult economyResult) {
+        if (economyResult.success()) {
+            return economyAuditSuffix("refunded", economyResult);
+        }
+        return "; refund failed " + economyResult.userMessage();
+    }
+
+    private static String rollbackDetail(ClaimEconomyResult rollback) {
+        if (rollback.success()) {
+            return "; payment rollback refunded " + rollback.formattedAmount();
+        }
+        return "; payment rollback failed: " + rollback.userMessage();
     }
 
     private static List<Claim> connectedOwnedClaimGroup(ClaimRepository repository, Claim base, PlayerOwner owner) {
@@ -426,6 +620,21 @@ public final class ClaimChunkEditService {
             ChunkKey affectedChunk
     ) {
         return ClaimChunkEditResult.failure(action, new ClaimChunkEditFailure(reason, detail), Set.of(affectedChunk));
+    }
+
+    private static ClaimChunkEditResult failure(
+            ClaimChunkEditAction action,
+            ClaimChunkEditFailureReason reason,
+            String detail,
+            ChunkKey affectedChunk,
+            ClaimEconomyResult economyResult
+    ) {
+        return ClaimChunkEditResult.failure(
+                action,
+                new ClaimChunkEditFailure(reason, detail),
+                economyResult,
+                Set.of(affectedChunk)
+        );
     }
 
     private static String exceptionDetail(RuntimeException exception) {

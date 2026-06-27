@@ -33,6 +33,34 @@ class ClaimChunkEditServiceTest {
     }
 
     @Test
+    void addChunkChargesBeforeSaving() {
+        ClaimHarness harness = new ClaimHarness(defaultConfig());
+        FakeClaimEconomyProvider economy = new FakeClaimEconomyProvider();
+        UUID owner = UUID.randomUUID();
+        harness.create(owner, chunk(0, 0), 0);
+
+        ClaimChunkEditResult result = harness.add(owner, chunk(1, 0), economy);
+
+        assertTrue(result.failure().isEmpty());
+        assertEquals(List.of(ClaimPricingService.REF_CHUNK_ADD), economy.chargeReferences());
+        assertEquals("charge:" + ClaimPricingService.REF_CHUNK_ADD, result.economyResult().orElseThrow().providerReference());
+    }
+
+    @Test
+    void addChunkPaymentFailureLeavesClaimUnchanged() {
+        ClaimHarness harness = new ClaimHarness(defaultConfig());
+        FakeClaimEconomyProvider economy = new FakeClaimEconomyProvider();
+        economy.failCharge();
+        UUID owner = UUID.randomUUID();
+        harness.create(owner, chunk(0, 0), 0);
+
+        ClaimChunkEditResult result = harness.add(owner, chunk(1, 0), economy);
+
+        assertEquals(ClaimChunkEditFailureReason.PAYMENT_FAILED, result.failure().orElseThrow().reason());
+        assertTrue(harness.claimService.findClaim(chunk(1, 0)).isEmpty());
+    }
+
+    @Test
     void rejectsNonAdjacentAdd() {
         ClaimHarness harness = new ClaimHarness(defaultConfig());
         UUID owner = UUID.randomUUID();
@@ -54,6 +82,22 @@ class ClaimChunkEditServiceTest {
         ClaimChunkEditResult result = harness.remove(owner, chunk(1, 0));
 
         assertEquals(ClaimChunkEditFailureReason.WOULD_SPLIT, result.failure().orElseThrow().reason());
+    }
+
+    @Test
+    void removeRefundsAfterSuccessfulEdit() {
+        ClaimHarness harness = new ClaimHarness(defaultConfig());
+        FakeClaimEconomyProvider economy = new FakeClaimEconomyProvider();
+        UUID owner = UUID.randomUUID();
+        harness.create(owner, chunk(0, 0), 0);
+        harness.add(owner, chunk(1, 0));
+
+        ClaimChunkEditResult result = harness.remove(owner, chunk(1, 0), economy);
+
+        assertTrue(result.failure().isEmpty());
+        assertEquals(List.of(ClaimPricingService.REF_CHUNK_REMOVE_REFUND), economy.refundReferences());
+        assertEquals("refund:" + ClaimPricingService.REF_CHUNK_REMOVE_REFUND, result.economyResult().orElseThrow().providerReference());
+        assertTrue(result.auditEntry().orElseThrow().detail().contains("refunded $3.75"));
     }
 
     @Test
@@ -179,8 +223,16 @@ class ClaimChunkEditServiceTest {
             return editService.addChunk(repository, claimService, config, request(owner, chunk));
         }
 
+        private ClaimChunkEditResult add(UUID owner, ChunkKey chunk, FakeClaimEconomyProvider economy) {
+            return editService.addChunk(repository, claimService, config, request(owner, chunk), economy);
+        }
+
         private ClaimChunkEditResult remove(UUID owner, ChunkKey chunk) {
             return editService.removeChunk(repository, claimService, request(owner, chunk));
+        }
+
+        private ClaimChunkEditResult remove(UUID owner, ChunkKey chunk, FakeClaimEconomyProvider economy) {
+            return editService.removeChunk(repository, claimService, config, request(owner, chunk), economy);
         }
 
         private ClaimChunkEditResult split(UUID owner, ChunkKey chunk) {

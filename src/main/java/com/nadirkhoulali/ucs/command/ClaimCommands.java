@@ -5,6 +5,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyProvider;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyResult;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditAction;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditFailure;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditRequest;
@@ -128,12 +130,13 @@ public final class ClaimCommands {
                 repository.orElseThrow(),
                 services.claimService().orElseThrow(),
                 UcsCommonConfig.snapshot(),
-                request
+                request,
+                activeEconomyProvider(services)
         );
 
         if (result.claim().isPresent()) {
             source.sendSuccess(
-                    () -> successMessage(result, center, radius),
+                    () -> claimSuccessMessage(result, center, radius),
                     false
             );
             return Command.SINGLE_SUCCESS;
@@ -158,22 +161,28 @@ public final class ClaimCommands {
         }
 
         ClaimChunkEditRequest request = editRequest(player);
+        ClaimEconomyProvider economyProvider = activeEconomyProvider(services);
         ClaimChunkEditResult result = switch (action) {
             case ADD -> services.claimChunkEdit().addChunk(
                     repository.orElseThrow(),
                     services.claimService().orElseThrow(),
                     UcsCommonConfig.snapshot(),
-                    request
+                    request,
+                    economyProvider
             );
             case REMOVE -> services.claimChunkEdit().removeChunk(
                     repository.orElseThrow(),
                     services.claimService().orElseThrow(),
-                    request
+                    UcsCommonConfig.snapshot(),
+                    request,
+                    economyProvider
             );
             case SPLIT -> services.claimChunkEdit().splitClaim(
                     repository.orElseThrow(),
                     services.claimService().orElseThrow(),
-                    request
+                    UcsCommonConfig.snapshot(),
+                    request,
+                    economyProvider
             );
             case MERGE -> services.claimChunkEdit().mergeAdjacentClaims(
                     repository.orElseThrow(),
@@ -482,7 +491,12 @@ public final class ClaimCommands {
         return Command.SINGLE_SUCCESS;
     }
 
-    private static Component successMessage(ClaimCreationResult result, ChunkKey center, int radius) {
+    private static Component claimSuccessMessage(ClaimCreationResult result, ChunkKey center, int radius) {
+        Component message = claimBaseSuccessMessage(result, center, radius);
+        return appendEconomyMessage(message, result.economyResult().orElse(null), true);
+    }
+
+    private static Component claimBaseSuccessMessage(ClaimCreationResult result, ChunkKey center, int radius) {
         if (radius == 0) {
             return Component.translatable(
                     "command.ucs.claim.success.single",
@@ -510,6 +524,7 @@ public final class ClaimCommands {
             case TOO_MANY_CLAIMS -> Component.translatable("command.ucs.claim.denied.too_many_claims", failure.detail());
             case TOO_MANY_CHUNKS -> Component.translatable("command.ucs.claim.denied.too_many_chunks", failure.detail());
             case OVERLAP -> Component.translatable("command.ucs.claim.denied.overlap", failure.detail());
+            case PAYMENT_FAILED -> Component.translatable("command.ucs.claim.denied.payment_failed", failure.detail());
             case SAVE_FAILED -> Component.translatable("command.ucs.claim.denied.save_failed", failure.detail());
         };
     }
@@ -555,24 +570,24 @@ public final class ClaimCommands {
 
     private static Component editSuccessMessage(ClaimChunkEditResult result, ChunkKey chunk) {
         return switch (result.action()) {
-            case ADD -> Component.translatable(
+            case ADD -> appendEconomyMessage(Component.translatable(
                     "command.ucs.claim.edit.added",
                     chunk.x(),
                     chunk.z(),
                     result.claims().getFirst().displayName()
-            );
-            case REMOVE -> Component.translatable(
+            ), result.economyResult().orElse(null), true);
+            case REMOVE -> appendEconomyMessage(Component.translatable(
                     "command.ucs.claim.edit.removed",
                     chunk.x(),
                     chunk.z(),
                     result.claims().getFirst().displayName()
-            );
-            case SPLIT -> Component.translatable(
+            ), result.economyResult().orElse(null), false);
+            case SPLIT -> appendEconomyMessage(Component.translatable(
                     "command.ucs.claim.edit.split",
                     result.claims().size(),
                     chunk.x(),
                     chunk.z()
-            );
+            ), result.economyResult().orElse(null), false);
             case MERGE -> Component.translatable(
                     "command.ucs.claim.edit.merged",
                     result.claims().getFirst().displayName(),
@@ -593,8 +608,29 @@ public final class ClaimCommands {
             case CANNOT_REMOVE_ONLY_CHUNK -> Component.translatable("command.ucs.claim.edit.denied.only_chunk", failure.detail());
             case WOULD_SPLIT -> Component.translatable("command.ucs.claim.edit.denied.would_split", failure.detail());
             case NO_MERGE_TARGETS -> Component.translatable("command.ucs.claim.edit.denied.no_merge_targets", failure.detail());
+            case PAYMENT_FAILED -> Component.translatable("command.ucs.claim.denied.payment_failed", failure.detail());
             case SAVE_FAILED -> Component.translatable("command.ucs.claim.denied.save_failed", failure.detail());
         };
+    }
+
+    private static Component appendEconomyMessage(Component base, ClaimEconomyResult economyResult, boolean charge) {
+        if (economyResult == null) {
+            return base;
+        }
+        Component suffix;
+        if (economyResult.success()) {
+            suffix = Component.translatable(
+                    charge ? "command.ucs.claim.economy.charged" : "command.ucs.claim.economy.refunded",
+                    economyResult.formattedAmount()
+            );
+        } else {
+            suffix = Component.translatable("command.ucs.claim.economy.refund_failed", economyResult.userMessage());
+        }
+        return Component.empty().append(base).append(Component.literal(" ")).append(suffix);
+    }
+
+    private static ClaimEconomyProvider activeEconomyProvider(UcsServices services) {
+        return services.economyProviders().activeProvider();
     }
 
     private static Component metadataSuccessMessage(ClaimMetadataResult result) {

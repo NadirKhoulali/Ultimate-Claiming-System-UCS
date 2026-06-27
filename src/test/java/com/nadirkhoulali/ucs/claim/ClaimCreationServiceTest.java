@@ -43,6 +43,31 @@ class ClaimCreationServiceTest {
     }
 
     @Test
+    void radiusClaimChargesFullSelectionBeforeCreation() {
+        ClaimHarness harness = new ClaimHarness(defaultConfig());
+        FakeClaimEconomyProvider economy = new FakeClaimEconomyProvider();
+
+        ClaimCreationResult result = harness.create(request(new ChunkKey("minecraft:overworld", 0, 0), 1), economy);
+
+        assertTrue(result.claim().isPresent());
+        assertEquals("charge:" + ClaimPricingService.REF_CLAIM_CREATE, result.economyResult().orElseThrow().providerReference());
+        assertEquals(List.of(ClaimPricingService.REF_CLAIM_CREATE), economy.chargeReferences());
+        assertEquals("charged $65 ref charge:" + ClaimPricingService.REF_CLAIM_CREATE, result.auditEntry().orElseThrow().detail().split("; ")[1]);
+    }
+
+    @Test
+    void paymentFailureLeavesNoPartialClaimState() {
+        ClaimHarness harness = new ClaimHarness(defaultConfig());
+        FakeClaimEconomyProvider economy = new FakeClaimEconomyProvider();
+        economy.failCharge();
+
+        ClaimCreationResult result = harness.create(request(new ChunkKey("minecraft:overworld", 0, 0), 1), economy);
+
+        assertEquals(ClaimCreationFailureReason.PAYMENT_FAILED, result.failure().orElseThrow().reason());
+        assertTrue(harness.repository.claims().isEmpty());
+    }
+
+    @Test
     void rejectsDisabledDimension() {
         ClaimHarness harness = new ClaimHarness(defaultConfig());
 
@@ -176,6 +201,10 @@ class ClaimCreationServiceTest {
 
         private ClaimCreationResult create(ClaimCreationRequest request) {
             return service.createPlayerClaim(repository, claimService, config, request);
+        }
+
+        private ClaimCreationResult create(ClaimCreationRequest request, FakeClaimEconomyProvider economy) {
+            return service.createPlayerClaim(repository, claimService, config, request, economy);
         }
     }
 }

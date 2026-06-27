@@ -11,5 +11,6 @@ public enum ClaimChunkEditFailureReason {
     CANNOT_REMOVE_ONLY_CHUNK,
     WOULD_SPLIT,
     NO_MERGE_TARGETS,
+    PAYMENT_FAILED,
     SAVE_FAILED
 }
