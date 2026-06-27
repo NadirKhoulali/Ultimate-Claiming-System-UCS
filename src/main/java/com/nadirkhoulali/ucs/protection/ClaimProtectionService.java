@@ -243,6 +243,18 @@ public final class ClaimProtectionService {
         return checkClaimAction(claimService, registry, config, level, position, flagId, null);
     }
 
+    public ProtectionDecision checkPlayerAction(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            BlockPos position,
+            FlagId flagId,
+            Player player
+    ) {
+        return checkClaimAction(claimService, registry, config, level, position, flagId, player);
+    }
+
     public ProtectionDecision checkNaturalBoundary(
             UcsClaimService claimService,
             ProtectionFlagRegistry registry,

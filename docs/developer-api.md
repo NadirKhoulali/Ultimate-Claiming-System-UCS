@@ -98,6 +98,8 @@ Entity targets use the same exact-id/`#tag` approach for protected entities and 
 
 Natural protection uses NeoForge-native event surfaces: explosion detonation lists are filtered per affected block/entity, fluid placement and source conversion can be cancelled, mob spawn position and potential-spawn events can be denied, mob-griefing checks can be forced false, and PvP is handled through incoming damage actor resolution. No dedicated NeoForge server event for per-player weather display or vanilla fire spread was found in the 21.1.234 sources; UCS documents those as limitations and covers lava-created fire through fluid placement events where available.
 
+Movement protection is split between cancellable events and server-tick state cleanup. `EntityTeleportEvent` checks the destination chunk with `ucs:teleport`; `EntityTravelToDimensionEvent` checks the source chunk with `ucs:portal_use`; the movement service enforces `ucs:entry`, grants and removes UCS-owned claim flight, stops denied elytra gliding, and damps high-speed airborne movement for `ucs:wind_charge` where NeoForge does not expose a dedicated server-side wind-charge event.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.

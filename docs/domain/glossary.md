@@ -54,6 +54,10 @@ A configured entity type id or entity type tag that maps entity interaction, dam
 
 A server-side event with no trusted player actor, such as explosion damage, liquid flow, mob spawn, mob griefing, or weather policy. Natural actions are evaluated against the affected claim and normally deny when the relevant enabled flag protects the claim.
 
+## Claim Fly Grant
+
+A temporary player ability grant owned by UCS while the player remains in a claim where `ucs:fly` allows their effective roles. UCS tracks only the grants it creates and removes those grants when the player leaves or loses permission.
+
 ## Lease
 
 A tenant contract that grants a tenant role on a claim for a time window. Lease is separate from tax: rent is paid by a tenant, while tax/upkeep is paid by an owner to the server sink.

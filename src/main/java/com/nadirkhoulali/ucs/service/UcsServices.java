@@ -15,6 +15,7 @@ import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import com.nadirkhoulali.ucs.protection.DefaultProtectionFlagRegistry;
 import com.nadirkhoulali.ucs.protection.ClaimProtectionService;
+import com.nadirkhoulali.ucs.protection.ClaimMovementService;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.SavedDataClaimRepository;
 import com.nadirkhoulali.ucs.storage.UcsClaimsSavedData;
@@ -31,6 +32,7 @@ public final class UcsServices {
     private final ClaimRoleService claimRoleService = new ClaimRoleService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService();
+    private final ClaimMovementService claimMovementService = new ClaimMovementService();
     private final ProtectionFlagRegistry protectionFlags = DefaultProtectionFlagRegistry.withBuiltIns();
     private ClaimRepository claimRepository;
     private UcsClaimService claimService;
@@ -89,9 +91,14 @@ public final class UcsServices {
         return claimProtectionService;
     }
 
+    public ClaimMovementService claimMovement() {
+        return claimMovementService;
+    }
+
     public synchronized void clearServerState() {
         claimTeleportService.clear();
         claimExpulsionService.clear();
+        claimMovementService.clear();
         this.claimRepository = null;
         this.claimService = null;
         UcsApiProvider.clearActiveAccess();

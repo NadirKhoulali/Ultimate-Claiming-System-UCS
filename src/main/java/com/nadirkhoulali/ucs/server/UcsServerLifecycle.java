@@ -14,6 +14,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.EntityMountEvent;
 import net.neoforged.neoforge.event.entity.EntityMobGriefingEvent;
+import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
+import net.neoforged.neoforge.event.entity.EntityTravelToDimensionEvent;
 import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent;
@@ -100,6 +102,15 @@ public final class UcsServerLifecycle {
             UcsConfigSnapshot config = UcsCommonConfig.snapshot();
             services.claimTeleport().tick(event.getServer(), repository, config);
             services.claimExpulsion().tick(event.getServer(), repository, config);
+            services.claimService().ifPresent(claimService -> services.claimMovement().tick(
+                    event.getServer(),
+                    repository,
+                    claimService,
+                    services.protectionFlags(),
+                    config,
+                    services.claimProtection(),
+                    services.claimExpulsion()
+            ));
         });
     }
 
@@ -336,6 +347,54 @@ public final class UcsServerLifecycle {
         if (decision.denied() && restoreTossedItem(event)) {
             event.setCanceled(true);
             sendProtectionDenial(event.getPlayer(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityTeleport(EntityTeleportEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+                || !(event.getEntity().level() instanceof ServerLevel level)
+                || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkPlayerAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                BlockPos.containing(event.getTargetX(), event.getTargetY(), event.getTargetZ()),
+                UcsBuiltInProtectionFlags.TELEPORT,
+                player
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            player.setDeltaMovement(0.0D, 0.0D, 0.0D);
+            sendProtectionDenial(player, config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityTravelToDimension(EntityTravelToDimensionEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+                || !(event.getEntity().level() instanceof ServerLevel level)
+                || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkPlayerAction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                player.blockPosition(),
+                UcsBuiltInProtectionFlags.PORTAL_USE,
+                player
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            player.setDeltaMovement(0.0D, 0.0D, 0.0D);
+            sendProtectionDenial(player, config, decision.flagId().value(), decision.reason());
         }
     }
 
