@@ -1,6 +1,7 @@
 package com.nadirkhoulali.ucs.api;
 
 import com.nadirkhoulali.ucs.api.protection.ProtectionFlagRegistry;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyProviderRegistry;
 
 import java.util.Optional;
 
@@ -20,5 +21,9 @@ public final class UcsApi {
 
     public static Optional<ProtectionFlagRegistry> protectionFlags() {
         return UcsApiProvider.access().map(UcsApiAccess::protectionFlags);
+    }
+
+    public static Optional<ClaimEconomyProviderRegistry> economyProviders() {
+        return UcsApiProvider.access().map(UcsApiAccess::economyProviders);
     }
 }

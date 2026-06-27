@@ -18,9 +18,23 @@ The service is only present while a server world is active.
 
 Use `UcsApi.protectionFlags()` to access the live protection flag registry while a server world is active. Addons may register custom `ProtectionFlagDefinition` instances during their server-side initialization before their own protection checks depend on them.
 
+Use `UcsApi.economyProviders()` to access the provider registry:
+
+```java
+UcsApi.economyProviders().ifPresent(registry -> {
+    var provider = registry.activeProvider();
+    var payer = ClaimEconomyAccountRef.playerPrimary(playerUuid);
+    var result = provider.validateCanCharge(payer, BigDecimal.valueOf(25));
+});
+```
+
+The registry always has a fallback provider. `activeProvider()` returns the first available registered provider, or `ucs:none` when no compatible economy mod is available.
+
 ## Threading
 
 All v1 API methods are server-thread only unless a future method explicitly documents async safety. Do not access Minecraft world objects from background threads through UCS.
+
+Economy provider calls are also server-thread only by default. Providers may touch another mod's SavedData or service state, so addons should not call charge, refund, transfer, or balance methods from async workers unless the provider explicitly documents that operation as async-safe.
 
 ## Read Models
 
@@ -101,6 +115,29 @@ Natural protection uses NeoForge-native event surfaces: explosion detonation lis
 Movement protection is split between cancellable events and server-tick state cleanup. `EntityTeleportEvent` checks the destination chunk with `ucs:teleport`; `EntityTravelToDimensionEvent` checks the source chunk with `ucs:portal_use`; the movement service enforces `ucs:entry`, grants and removes UCS-owned claim flight, stops denied elytra gliding, and damps high-speed airborne movement for `ucs:wind_charge` where NeoForge does not expose a dedicated server-side wind-charge event.
 
 Admin bypass/debug state is held in `ProtectionAdminService`. `/ucs bypass` and `/ucs debug` are temporary per-player toggles guarded by `ucs.bypass` and `ucs.debug`; state is cleared on logout and server stop. Bypass allows decisions through `UcsProtectionDecisionEvent` with reason `admin_bypass`, and denial messages are throttled per player/action before optional debug details are sent.
+
+## Economy Providers
+
+The economy SPI lives under `com.nadirkhoulali.ucs.api.economy`.
+
+- `ClaimEconomyProvider` exposes availability, balance lookup, charge validation, charge, refund, transfer, and formatting operations.
+- `ClaimEconomyProviderRegistry` lets addons register providers and discover the active provider.
+- `ClaimEconomyAccountRef` supports provider-neutral references for a player's primary account, a provider-native account id, and a server ledger.
+- `ClaimEconomyResult` returns typed failure reasons, user-safe messages, the amount involved, the post-transaction balance when known, a provider transaction/reference id when available, and a provider-formatted amount.
+
+UCS ships with two built-in providers:
+
+- `ucs:none` is the fallback. It is never available and every operation fails with `PROVIDER_UNAVAILABLE`.
+- `ubs` is a soft Ultimate Banking System adapter. It is available only when the `ultimatebankingsystem` mod is loaded, the UBS public API class can be resolved, and the UBS server API reports that its backing server state is available.
+
+The UBS adapter does not compile against UBS. It reflectively calls `UltimateBankingApiProvider.get()` and then uses public `UltimateBankingApi` methods:
+
+- Player charges use `withdrawFromPrimary`.
+- Player refunds use `depositToPrimary`.
+- Transfers use `transferFromPrimary`, `transferToPrimary`, or account-id `transfer` depending on the source and destination account refs.
+- Balance validation resolves the primary account and calls `validateAccountCanSend` so failures preserve UBS account state such as missing, frozen, unavailable, or insufficient funds.
+
+Server-ledger refs are treated as external sinks/sources for `charge`, `refund`, and `transfer` where possible. Direct server-ledger balances are unsupported until a provider exposes a durable server account concept.
 
 ## Archive Admin Commands
 

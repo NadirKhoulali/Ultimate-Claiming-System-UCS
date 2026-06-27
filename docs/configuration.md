@@ -83,6 +83,13 @@ Economy defaults are enabled when a compatible provider exists:
 
 UCS logs a warning on startup while these defaults are active so established servers review them before adding an economy provider.
 
+The economy provider registry is exposed through the public API. UCS currently includes:
+
+- `ucs:none`, a no-provider fallback that returns `PROVIDER_UNAVAILABLE`.
+- `ubs`, a soft Ultimate Banking System adapter that activates only when the `ultimatebankingsystem` mod and its server API are available.
+
+Claim pricing enforcement is built on top of this provider SPI in later economy slices. The SPI already supports balance validation, charge, refund, transfer, provider transaction references, and formatted amounts.
+
 ## Map Cache
 
 Map terrain tiles are configured separately from claim SavedData. The default cache size is `1024 MiB`, with request/job limits to protect large servers.

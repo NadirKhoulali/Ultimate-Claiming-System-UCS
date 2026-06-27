@@ -2,6 +2,7 @@ package com.nadirkhoulali.ucs.service;
 
 import com.nadirkhoulali.ucs.api.UcsClaimService;
 import com.nadirkhoulali.ucs.api.UcsApiProvider;
+import com.nadirkhoulali.ucs.api.economy.ClaimEconomyProviderRegistry;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsClaimService;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
 import com.nadirkhoulali.ucs.api.protection.ProtectionFlagRegistry;
@@ -11,6 +12,7 @@ import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
 import com.nadirkhoulali.ucs.claim.ClaimRoleService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
+import com.nadirkhoulali.ucs.economy.DefaultClaimEconomyProviderRegistry;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import com.nadirkhoulali.ucs.protection.DefaultProtectionFlagRegistry;
@@ -36,6 +38,7 @@ public final class UcsServices {
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
     private final ProtectionFlagRegistry protectionFlags = DefaultProtectionFlagRegistry.withBuiltIns();
+    private final ClaimEconomyProviderRegistry economyProviders = DefaultClaimEconomyProviderRegistry.withBuiltIns();
     private ClaimRepository claimRepository;
     private UcsClaimService claimService;
 
@@ -45,7 +48,7 @@ public final class UcsServices {
                 .computeIfAbsent(UcsClaimsSavedData.factory(), UcsClaimsSavedData.DATA_NAME);
         this.claimRepository = new SavedDataClaimRepository(savedData);
         this.claimService = new DefaultUcsClaimService(claimRepository);
-        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimService, protectionFlags));
+        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimService, protectionFlags, economyProviders));
         return claimRepository;
     }
 
@@ -99,6 +102,10 @@ public final class UcsServices {
 
     public ClaimMovementService claimMovement() {
         return claimMovementService;
+    }
+
+    public ClaimEconomyProviderRegistry economyProviders() {
+        return economyProviders;
     }
 
     public synchronized void clearServerState() {

@@ -74,6 +74,10 @@ A preserved inactive or removed claim snapshot. Archive is used before destructi
 
 A recurring owner-side upkeep or server surcharge. Tax money goes to the configured server sink ledger.
 
+## Economy Provider
+
+An optional integration that performs balance checks, charges, refunds, transfers, and money formatting for UCS. `ucs:none` is the fallback when no provider is available; `ubs` is the built-in soft adapter for Ultimate Banking System.
+
 ## Audit Entry
 
 A durable record of an admin, economy, or claim-management action. Audit entries are used for debugging, abuse review, and admin console history.

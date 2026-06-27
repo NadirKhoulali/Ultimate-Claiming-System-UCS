@@ -16,5 +16,6 @@ class UcsApiProviderTest {
         UcsApiProvider.clearActiveAccess();
 
         assertTrue(UcsApi.claimService().isEmpty());
+        assertTrue(UcsApi.economyProviders().isEmpty());
     }
 }
