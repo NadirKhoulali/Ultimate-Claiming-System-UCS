@@ -5,11 +5,13 @@ import com.nadirkhoulali.ucs.command.UcsCommands;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.config.UcsConfigValidationReport;
+import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 
 public final class UcsServerLifecycle {
     private final UcsServices services;
@@ -20,7 +22,12 @@ public final class UcsServerLifecycle {
 
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
-        UcsCommands.register(event.getDispatcher());
+        UcsCommands.register(event.getDispatcher(), services);
+    }
+
+    @SubscribeEvent
+    public void onGatherPermissionNodes(PermissionGatherEvent.Nodes event) {
+        UcsPermissionNodes.register(event);
     }
 
     @SubscribeEvent

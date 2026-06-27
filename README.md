@@ -29,6 +29,7 @@ Project language and scope:
 - [Configuration guide](docs/configuration.md)
 - [Storage design](docs/storage.md)
 - [Developer API](docs/developer-api.md)
+- [Permissions guide](docs/permissions.md)
 
 See [docs/development/testing.md](docs/development/testing.md) for the unit-test and GameTest validation strategy.
 

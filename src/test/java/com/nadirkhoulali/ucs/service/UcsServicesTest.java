@@ -7,6 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class UcsServicesTest {
     @Test
     void summaryIdentifiesBootstrapState() {
-        assertEquals("bootstrap", new UcsServices().summary());
+        assertEquals("bootstrap, permissions=6", new UcsServices().summary());
     }
 }

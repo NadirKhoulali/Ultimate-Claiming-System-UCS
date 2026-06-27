@@ -1,5 +1,8 @@
 {
   "command.ucs.about": "Ultimate Claiming System is loaded. Claiming features will be added through the UCS roadmap.",
+  "command.ucs.permission.denied": "You do not have permission to use this UCS action (%s).",
+  "command.ucs.permissions.summary": "UCS permissions: handler=%s, opFallback=%s, nodePrefix=%s",
+  "command.ucs.permissions.node": "%s - OP level %s fallback, audit=%s",
   "command.ucs.version": "%s %s",
   "ucs.configuration.title": "Ultimate Claiming System Config",
   "ucs.configuration.section.ucs.common.toml": "Ultimate Claiming System Config",

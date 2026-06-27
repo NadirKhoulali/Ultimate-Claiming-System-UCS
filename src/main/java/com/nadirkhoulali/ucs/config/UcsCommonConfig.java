@@ -160,10 +160,10 @@ public final class UcsCommonConfig {
         BUILDER.push("commands");
         PERMISSION_NODE_PREFIX = BUILDER
                 .comment("Global NeoForge permission node prefix for UCS admin/bypass commands.")
-                .define("permissionNodePrefix", "ucs", UcsConfigValidators::isSimpleKey);
+                .define("permissionNodePrefix", UcsConfigDefaults.PERMISSION_NODE_PREFIX, UcsConfigValidators::isSimpleKey);
         OP_FALLBACK_ENABLED = BUILDER
                 .comment("Whether OP fallback is enabled when no permission manager is present.")
-                .define("opFallbackEnabled", true);
+                .define("opFallbackEnabled", UcsConfigDefaults.OP_FALLBACK_ENABLED);
         BUILDER.pop();
 
         BUILDER.push("messages");

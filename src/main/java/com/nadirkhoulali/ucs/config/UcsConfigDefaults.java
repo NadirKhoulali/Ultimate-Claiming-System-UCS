@@ -4,6 +4,8 @@ import java.util.List;
 
 public final class UcsConfigDefaults {
     public static final int CURRENT_SCHEMA_VERSION = 1;
+    public static final String PERMISSION_NODE_PREFIX = "ucs";
+    public static final boolean OP_FALLBACK_ENABLED = true;
 
     public static final List<String> ENABLED_DIMENSIONS = List.of(
             "minecraft:overworld",

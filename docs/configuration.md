@@ -50,7 +50,9 @@ Audit logging is enabled by default. Inactive purge is disabled by default. If i
 
 ## Commands And Messages
 
-`commands.permissionNodePrefix` defaults to `ucs`. `messages.defaultLocale` defaults to `en_us`.
+`commands.permissionNodePrefix` defaults to `ucs`. `commands.opFallbackEnabled` defaults to `true` and controls player OP fallback for UCS server-authority permission nodes. `messages.defaultLocale` defaults to `en_us`.
+
+See [UCS Permissions](permissions.md) for the registered NeoForge nodes and fallback behavior.
 
 ## Validation
 
