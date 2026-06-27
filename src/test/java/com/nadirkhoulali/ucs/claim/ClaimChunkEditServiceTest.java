@@ -69,6 +69,8 @@ class ClaimChunkEditServiceTest {
         assertTrue(result.failure().isEmpty());
         assertEquals(2, result.claims().size());
         assertEquals(2, harness.repository.claims().size());
+        assertEquals(1, harness.repository.archives().size());
+        assertTrue(harness.repository.archives().stream().findFirst().orElseThrow().reason().contains("split claim"));
     }
 
     @Test
@@ -83,6 +85,8 @@ class ClaimChunkEditServiceTest {
         assertTrue(result.failure().isEmpty());
         assertEquals(1, harness.repository.claims().size());
         assertEquals(2, result.claims().getFirst().chunks().size());
+        assertEquals(1, harness.repository.archives().size());
+        assertTrue(harness.repository.archives().stream().findFirst().orElseThrow().reason().contains("merged into"));
     }
 
     @Test
@@ -141,6 +145,7 @@ class ClaimChunkEditServiceTest {
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),
                 new UcsConfigSnapshot.AuditPolicy(true, 250, 180),
+                new UcsConfigSnapshot.ArchivePolicy(365),
                 new UcsConfigSnapshot.InactivePurgePolicy(false, 90, true),
                 new UcsConfigSnapshot.CommandPolicy(
                         UcsConfigDefaults.PERMISSION_NODE_PREFIX,
@@ -152,11 +157,12 @@ class ClaimChunkEditServiceTest {
 
     private final class ClaimHarness {
         private final SavedDataClaimRepository repository = new SavedDataClaimRepository(new UcsClaimsSavedData());
-        private final DefaultUcsClaimService claimService = new DefaultUcsClaimService(repository);
         private final UcsConfigSnapshot config;
+        private final DefaultUcsClaimService claimService;
 
         private ClaimHarness(UcsConfigSnapshot config) {
             this.config = config;
+            this.claimService = new DefaultUcsClaimService(repository, () -> this.config);
         }
 
         private void create(UUID owner, ChunkKey chunk, int radius) {

@@ -53,6 +53,8 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.IntValue AUDIT_MAX_ENTRIES_PER_CLAIM;
     public static final ModConfigSpec.IntValue AUDIT_RETENTION_DAYS;
 
+    public static final ModConfigSpec.IntValue ARCHIVE_RETENTION_DAYS;
+
     public static final ModConfigSpec.BooleanValue INACTIVE_PURGE_ENABLED;
     public static final ModConfigSpec.IntValue INACTIVE_PURGE_AFTER_DAYS;
     public static final ModConfigSpec.BooleanValue ARCHIVE_BEFORE_DELETE;
@@ -202,6 +204,12 @@ public final class UcsCommonConfig {
                 .defineInRange("retentionDays", 180, 1, 36_500);
         BUILDER.pop();
 
+        BUILDER.push("archive");
+        ARCHIVE_RETENTION_DAYS = BUILDER
+                .comment("Archive retention in days before old archived claim snapshots are pruned when new archives are created.")
+                .defineInRange("retentionDays", 365, 1, 36_500);
+        BUILDER.pop();
+
         BUILDER.push("inactivePurge");
         INACTIVE_PURGE_ENABLED = BUILDER
                 .comment("Whether inactive claims can be purged automatically. Disabled by default.")
@@ -293,6 +301,7 @@ public final class UcsCommonConfig {
                         AUDIT_MAX_ENTRIES_PER_CLAIM.get(),
                         AUDIT_RETENTION_DAYS.get()
                 ),
+                new UcsConfigSnapshot.ArchivePolicy(ARCHIVE_RETENTION_DAYS.get()),
                 new UcsConfigSnapshot.InactivePurgePolicy(
                         INACTIVE_PURGE_ENABLED.get(),
                         INACTIVE_PURGE_AFTER_DAYS.get(),

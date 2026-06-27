@@ -46,6 +46,7 @@ class UcsConfigValidatorsTest {
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
+                base.archive(),
                 new UcsConfigSnapshot.InactivePurgePolicy(true, 90, false),
                 base.commands(),
                 base.messages()
@@ -73,6 +74,7 @@ class UcsConfigValidatorsTest {
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
+                base.archive(),
                 base.inactivePurge(),
                 base.commands(),
                 base.messages()
@@ -100,6 +102,7 @@ class UcsConfigValidatorsTest {
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
+                base.archive(),
                 base.inactivePurge(),
                 base.commands(),
                 base.messages()
@@ -127,6 +130,7 @@ class UcsConfigValidatorsTest {
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
+                base.archive(),
                 base.inactivePurge(),
                 base.commands(),
                 base.messages()
@@ -155,6 +159,7 @@ class UcsConfigValidatorsTest {
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
+                base.archive(),
                 base.inactivePurge(),
                 base.commands(),
                 base.messages()
@@ -164,6 +169,34 @@ class UcsConfigValidatorsTest {
 
         assertFalse(report.valid());
         assertTrue(report.errors().stream().anyMatch(error -> error.contains("bans.expulsionSearchRadiusBlocks")));
+    }
+
+    @Test
+    void rejectsInvalidArchiveRetention() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
+                base.roles(),
+                base.bans(),
+                base.flags(),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                new UcsConfigSnapshot.ArchivePolicy(0),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        UcsConfigValidationReport report = snapshot.validate();
+
+        assertFalse(report.valid());
+        assertTrue(report.errors().stream().anyMatch(error -> error.contains("archive.retentionDays")));
     }
 
     @Test
@@ -192,6 +225,7 @@ class UcsConfigValidatorsTest {
                 base.economy(),
                 base.mapCache(),
                 base.audit(),
+                base.archive(),
                 base.inactivePurge(),
                 base.commands(),
                 base.messages()
@@ -216,6 +250,7 @@ class UcsConfigValidatorsTest {
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),
                 new UcsConfigSnapshot.AuditPolicy(true, 250, 180),
+                new UcsConfigSnapshot.ArchivePolicy(365),
                 new UcsConfigSnapshot.InactivePurgePolicy(false, 90, true),
                 new UcsConfigSnapshot.CommandPolicy("ucs", true),
                 new UcsConfigSnapshot.MessagePolicy("en_us", true)

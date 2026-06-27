@@ -62,15 +62,21 @@ final class ClaimNbtCodec {
         tag.put("claim", encodeClaim(archive.claim()));
         tag.putLong("archivedAt", archive.archivedAt().toEpochMilli());
         tag.putString("reason", archive.reason());
+        tag.putString("actor", archive.actor());
+        tag.putInt("dataVersion", archive.dataVersion());
         return tag;
     }
 
     static ClaimArchive decodeArchive(CompoundTag tag) {
+        String actor = tag.contains("actor", Tag.TAG_STRING) ? tag.getString("actor") : ClaimArchive.UNKNOWN_ACTOR;
+        int dataVersion = tag.contains("dataVersion", Tag.TAG_INT) ? tag.getInt("dataVersion") : 1;
         return new ClaimArchive(
                 new ArchiveId(UUID.fromString(tag.getString("id"))),
                 decodeClaim(tag.getCompound("claim")),
                 Instant.ofEpochMilli(tag.getLong("archivedAt")),
-                tag.getString("reason")
+                tag.getString("reason"),
+                actor,
+                dataVersion
         );
     }
 

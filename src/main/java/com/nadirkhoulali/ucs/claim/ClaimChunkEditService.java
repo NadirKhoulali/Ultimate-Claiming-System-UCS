@@ -1,8 +1,10 @@
 package com.nadirkhoulali.ucs.claim;
 
+import com.nadirkhoulali.ucs.api.ClaimArchiveView;
 import com.nadirkhoulali.ucs.api.ClaimView;
 import com.nadirkhoulali.ucs.api.UcsClaimService;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
+import com.nadirkhoulali.ucs.core.model.ArchiveId;
 import com.nadirkhoulali.ucs.core.model.AuditAction;
 import com.nadirkhoulali.ucs.core.model.AuditEntry;
 import com.nadirkhoulali.ucs.core.model.ChunkKey;
@@ -145,8 +147,15 @@ public final class ClaimChunkEditService {
 
         List<Claim> splitClaims = splitClaims(original.orElseThrow(), components, request.requestedAt());
         Set<ChunkKey> affectedChunks = new LinkedHashSet<>(ClaimShape.keys(original.orElseThrow().chunks()));
+        ClaimArchiveView archivedOriginal = null;
         try {
-            claimService.deleteClaim(original.orElseThrow().id());
+            archivedOriginal = archiveClaim(
+                    claimService,
+                    original.orElseThrow(),
+                    owner,
+                    request.requestedAt(),
+                    "split claim after removing " + request.chunk().storageKey()
+            );
             List<ClaimView> saved = new ArrayList<>();
             for (Claim splitClaim : splitClaims) {
                 saved.add(claimService.saveClaim(splitClaim));
@@ -158,7 +167,10 @@ public final class ClaimChunkEditService {
                     affectedChunks
             );
         } catch (RuntimeException exception) {
-            rollbackSplit(claimService, original.orElseThrow(), splitClaims);
+            rollbackSplit(claimService, splitClaims);
+            if (archivedOriginal != null) {
+                claimService.restoreClaim(archivedOriginal.id());
+            }
             return failure(ClaimChunkEditAction.SPLIT, ClaimChunkEditFailureReason.SAVE_FAILED, exceptionDetail(exception), request.chunk());
         }
     }
@@ -196,10 +208,17 @@ public final class ClaimChunkEditService {
         }
 
         Set<ChunkKey> affectedChunks = ClaimShape.keys(mergedChunks);
+        List<ClaimArchiveView> archivedTargets = new ArrayList<>();
         try {
             for (Claim target : mergeGroup) {
                 if (!target.id().equals(base.orElseThrow().id())) {
-                    claimService.deleteClaim(target.id());
+                    archivedTargets.add(archiveClaim(
+                            claimService,
+                            target,
+                            owner,
+                            request.requestedAt(),
+                            "merged into " + base.orElseThrow().id().value()
+                    ));
                 }
             }
             Claim merged = withChunks(base.orElseThrow(), mergedChunks, request.requestedAt(), base.orElseThrow().metadata().displayName());
@@ -211,6 +230,8 @@ public final class ClaimChunkEditService {
                     affectedChunks
             );
         } catch (RuntimeException exception) {
+            claimService.saveClaim(base.orElseThrow());
+            restoreArchives(claimService, archivedTargets);
             return failure(ClaimChunkEditAction.MERGE, ClaimChunkEditFailureReason.SAVE_FAILED, exceptionDetail(exception), request.chunk());
         }
     }
@@ -348,11 +369,27 @@ public final class ClaimChunkEditService {
         return chunks.stream().map(ClaimChunk::key).mapToInt(ChunkKey::z).min().orElse(0);
     }
 
-    private static void rollbackSplit(UcsClaimService claimService, Claim original, List<Claim> splitClaims) {
+    private static ClaimArchiveView archiveClaim(
+            UcsClaimService claimService,
+            Claim claim,
+            PlayerOwner actor,
+            Instant archivedAt,
+            String reason
+    ) {
+        return claimService.archiveClaim(claim.id(), ArchiveId.random(), archivedAt, reason, actor.stableKey())
+                .orElseThrow(() -> new ClaimRepositoryException("Claim " + claim.id().value() + " could not be archived"));
+    }
+
+    private static void rollbackSplit(UcsClaimService claimService, List<Claim> splitClaims) {
         for (Claim splitClaim : splitClaims) {
             claimService.deleteClaim(splitClaim.id());
         }
-        claimService.saveClaim(original);
+    }
+
+    private static void restoreArchives(UcsClaimService claimService, List<ClaimArchiveView> archives) {
+        for (int index = archives.size() - 1; index >= 0; index--) {
+            claimService.restoreClaim(archives.get(index).id());
+        }
     }
 
     private static PlayerOwner owner(ClaimChunkEditRequest request) {

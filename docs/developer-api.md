@@ -24,6 +24,8 @@ All v1 API methods are server-thread only unless a future method explicitly docu
 
 `ClaimView`, `ClaimArchiveView`, and `OwnerView` are immutable read models. They do not expose repository internals or mutable collections.
 
+`ClaimArchiveView` includes the archived claim snapshot, archive timestamp, reason, actor stable key, and storage data version. Addons should display archive ids to admins because restore APIs use `ArchiveId`.
+
 `ClaimView` includes player-facing metadata:
 
 - `displayName`
@@ -48,14 +50,18 @@ Use `OwnerRef.stableKey()` or `ClaimOwnership` helpers for comparisons. Do not a
 `UcsClaimService` supports:
 
 - Listing active claims.
+- Listing archived claims.
 - Lookup by claim id.
 - Lookup by dimension/chunk through the spatial index.
+- Lookup by archive id.
 - Saving immutable domain claims.
 - Deleting claims.
 - Archiving claims.
 - Restoring archives.
 
 Mutation methods emit NeoForge events after repository commit.
+
+Archive restore validates that archived chunks are unclaimed, archived dimensions remain claimable, the original claim id is not active, the owner reference is still valid, and the archive data version is not newer than UCS can read. Invalid restores throw `ClaimRepositoryException` and leave the archive intact.
 
 Built-in player commands update claim metadata through the same service path, so name, description, and spawn edits emit `UcsClaimEvent.Updated` after repository commit.
 
@@ -70,6 +76,10 @@ Built-in player commands can trust, untrust, assign configured roles, and accept
 The built-in banned role is the first hard-denial role. `/claim ban` assigns it and removes conflicting non-owner role grants; `/claim unban` clears it. `/claim kick` and automatic banned-entry prevention use `ClaimExpulsionService` to search for a safe same-dimension destination outside the claim.
 
 Expulsion decisions post `UcsProtectionDecisionEvent` with `ucs:entry` or `ucs:expel`, allowing addons to observe or override the movement decision before UCS teleports the player.
+
+## Archive Admin Commands
+
+`/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.
 
 ## Events
 

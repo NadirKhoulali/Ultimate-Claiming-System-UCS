@@ -16,6 +16,11 @@ public interface UcsClaimService {
     Collection<ClaimView> claims();
 
     /**
+     * Threading: server-thread only. Returns immutable archive views.
+     */
+    Collection<ClaimArchiveView> archives();
+
+    /**
      * Threading: server-thread only.
      */
     Optional<ClaimView> findClaim(ClaimId claimId);
@@ -26,6 +31,11 @@ public interface UcsClaimService {
     Optional<ClaimView> findClaim(ChunkKey chunkKey);
 
     /**
+     * Threading: server-thread only.
+     */
+    Optional<ClaimArchiveView> findArchive(ArchiveId archiveId);
+
+    /**
      * Threading: server-thread only. Saves an immutable domain claim and emits create/update events after commit.
      */
     ClaimView saveClaim(Claim claim);
@@ -34,6 +44,11 @@ public interface UcsClaimService {
      * Threading: server-thread only. Archives a claim and emits an archive event after commit.
      */
     Optional<ClaimArchiveView> archiveClaim(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason);
+
+    /**
+     * Threading: server-thread only. Archives a claim with an explicit actor stable key.
+     */
+    Optional<ClaimArchiveView> archiveClaim(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason, String actor);
 
     /**
      * Threading: server-thread only. Restores an archived claim and emits a restore event after commit.

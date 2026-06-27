@@ -15,15 +15,21 @@ public interface ClaimRepository {
 
     Collection<ClaimArchive> archives();
 
+    Optional<ClaimArchive> findArchive(ArchiveId archiveId);
+
     Optional<Claim> findById(ClaimId id);
 
     Optional<Claim> findByChunk(ChunkKey chunkKey);
 
     Claim save(Claim claim);
 
-    Optional<ClaimArchive> archive(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason);
+    Optional<ClaimArchive> archive(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason, String actor, int dataVersion);
 
     Optional<Claim> restore(ArchiveId archiveId);
+
+    Optional<ClaimArchive> deleteArchive(ArchiveId archiveId);
+
+    int pruneArchivesBefore(Instant cutoff);
 
     Optional<Claim> delete(ClaimId claimId);
 

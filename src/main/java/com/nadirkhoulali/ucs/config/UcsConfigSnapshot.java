@@ -18,6 +18,7 @@ public record UcsConfigSnapshot(
         EconomyPolicy economy,
         MapCachePolicy mapCache,
         AuditPolicy audit,
+        ArchivePolicy archive,
         InactivePurgePolicy inactivePurge,
         CommandPolicy commands,
         MessagePolicy messages
@@ -108,6 +109,11 @@ public record UcsConfigSnapshot(
     public record AuditPolicy(
             boolean enabled,
             int maxEntriesPerClaim,
+            int retentionDays
+    ) {
+    }
+
+    public record ArchivePolicy(
             int retentionDays
     ) {
     }

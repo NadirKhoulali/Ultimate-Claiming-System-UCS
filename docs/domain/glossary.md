@@ -44,7 +44,7 @@ A tenant contract that grants a tenant role on a claim for a time window. Lease 
 
 ## Archive
 
-A preserved inactive or removed claim snapshot. Archive is used before destructive cleanup, nonpayment removal, and admin restore flows.
+A preserved inactive or removed claim snapshot. Archive is used before destructive cleanup, nonpayment removal, and admin restore flows. An archive records the original claim, reason, actor, timestamp, and storage data version so restore can validate compatibility before reactivating chunks.
 
 ## Tax
 

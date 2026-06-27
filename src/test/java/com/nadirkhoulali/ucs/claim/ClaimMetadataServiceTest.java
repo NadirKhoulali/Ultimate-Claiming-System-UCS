@@ -139,6 +139,7 @@ class ClaimMetadataServiceTest {
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),
                 new UcsConfigSnapshot.AuditPolicy(true, 250, 180),
+                new UcsConfigSnapshot.ArchivePolicy(365),
                 new UcsConfigSnapshot.InactivePurgePolicy(false, 90, true),
                 new UcsConfigSnapshot.CommandPolicy(
                         UcsConfigDefaults.PERMISSION_NODE_PREFIX,

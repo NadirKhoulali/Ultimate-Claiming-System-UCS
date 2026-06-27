@@ -42,6 +42,7 @@ public final class UcsConfigValidators {
         validateEconomy(config.economy(), report);
         validateMapCache(config.mapCache(), report);
         validateAudit(config.audit(), report);
+        validateArchive(config.archive(), report);
         validateInactivePurge(config.inactivePurge(), report);
         validateCommands(config.commands(), report);
         validateMessages(config.messages(), report);
@@ -184,6 +185,13 @@ public final class UcsConfigValidators {
         if (!audit.enabled()) {
             report.warning("Audit logging is disabled; admin/economy traceability will be limited");
         }
+    }
+
+    private static void validateArchive(
+            UcsConfigSnapshot.ArchivePolicy archive,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireAtLeast("archive.retentionDays", archive.retentionDays(), 1, report);
     }
 
     private static void validateInactivePurge(

@@ -9,14 +9,18 @@ public record ClaimArchiveView(
         ArchiveId id,
         ClaimView claim,
         Instant archivedAt,
-        String reason
+        String reason,
+        String actor,
+        int dataVersion
 ) {
     public static ClaimArchiveView from(ClaimArchive archive) {
         return new ClaimArchiveView(
                 archive.id(),
                 ClaimView.from(archive.claim()),
                 archive.archivedAt(),
-                archive.reason()
+                archive.reason(),
+                archive.actor(),
+                archive.dataVersion()
         );
     }
 }

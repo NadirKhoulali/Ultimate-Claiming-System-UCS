@@ -19,6 +19,10 @@ UCS v1 stores claim/domain data in Minecraft `SavedData` under the overworld dat
 - Archive.
 - Restore.
 
+Archive records preserve the original claim snapshot plus archive id, reason, actor stable key, archive timestamp, and the UCS storage data version that created the archive. Restores validate that the archive data version is not newer than the running storage version and that the archived chunks are still free before the archive is removed.
+
+Archive retention is configured separately from inactive purge. `archive.retentionDays` defaults to `365`; expired archive records are pruned when new archives are created.
+
 ## Claim Metadata
 
 Saved claims persist display name, description, and an optional exact spawn position. The spawn stores dimension/chunk plus x/y/z/yaw/pitch; `spawnChunk` is still exposed as a derived compatibility accessor for chunk-level checks.

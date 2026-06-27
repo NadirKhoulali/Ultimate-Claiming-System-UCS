@@ -29,6 +29,11 @@ public final class SavedDataClaimRepository implements ClaimRepository {
     }
 
     @Override
+    public synchronized Optional<ClaimArchive> findArchive(ArchiveId archiveId) {
+        return savedData.findArchive(archiveId);
+    }
+
+    @Override
     public synchronized Optional<Claim> findById(ClaimId id) {
         return savedData.findById(id);
     }
@@ -45,13 +50,23 @@ public final class SavedDataClaimRepository implements ClaimRepository {
     }
 
     @Override
-    public synchronized Optional<ClaimArchive> archive(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason) {
-        return savedData.archive(claimId, archiveId, archivedAt, reason);
+    public synchronized Optional<ClaimArchive> archive(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason, String actor, int dataVersion) {
+        return savedData.archive(claimId, archiveId, archivedAt, reason, actor, dataVersion);
     }
 
     @Override
     public synchronized Optional<Claim> restore(ArchiveId archiveId) {
         return savedData.restore(archiveId);
+    }
+
+    @Override
+    public synchronized Optional<ClaimArchive> deleteArchive(ArchiveId archiveId) {
+        return savedData.deleteArchive(archiveId);
+    }
+
+    @Override
+    public synchronized int pruneArchivesBefore(Instant cutoff) {
+        return savedData.pruneArchivesBefore(cutoff);
     }
 
     @Override

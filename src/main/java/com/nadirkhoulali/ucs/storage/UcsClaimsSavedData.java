@@ -107,6 +107,10 @@ public final class UcsClaimsSavedData extends SavedData {
         return List.copyOf(archives.values());
     }
 
+    public Optional<ClaimArchive> findArchive(ArchiveId archiveId) {
+        return Optional.ofNullable(archives.get(archiveId));
+    }
+
     public Optional<Claim> findById(ClaimId id) {
         return Optional.ofNullable(claims.get(id));
     }
@@ -130,13 +134,23 @@ public final class UcsClaimsSavedData extends SavedData {
         return Optional.of(removed);
     }
 
-    public Optional<ClaimArchive> archive(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason) {
+    public Optional<ClaimArchive> archive(
+            ClaimId claimId,
+            ArchiveId archiveId,
+            Instant archivedAt,
+            String reason,
+            String actor,
+            int dataVersion
+    ) {
+        if (archives.containsKey(archiveId)) {
+            throw new ClaimRepositoryException("Duplicate archive id " + archiveId.value());
+        }
         Claim removed = claims.remove(claimId);
         if (removed == null) {
             return Optional.empty();
         }
         index.remove(removed);
-        ClaimArchive archive = new ClaimArchive(archiveId, removed, archivedAt, reason);
+        ClaimArchive archive = new ClaimArchive(archiveId, removed, archivedAt, reason, actor, dataVersion);
         archives.put(archive.id(), archive);
         setDirty();
         return Optional.of(archive);
@@ -155,6 +169,27 @@ public final class UcsClaimsSavedData extends SavedData {
             archives.put(archive.id(), archive);
             throw exception;
         }
+    }
+
+    public Optional<ClaimArchive> deleteArchive(ArchiveId archiveId) {
+        ClaimArchive removed = archives.remove(archiveId);
+        if (removed == null) {
+            return Optional.empty();
+        }
+        setDirty();
+        return Optional.of(removed);
+    }
+
+    public int pruneArchivesBefore(Instant cutoff) {
+        List<ArchiveId> expired = archives.values().stream()
+                .filter(archive -> archive.archivedAt().isBefore(cutoff))
+                .map(ClaimArchive::id)
+                .toList();
+        expired.forEach(archives::remove);
+        if (!expired.isEmpty()) {
+            setDirty();
+        }
+        return expired.size();
     }
 
     public int indexedChunkCount() {

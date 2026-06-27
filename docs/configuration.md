@@ -79,7 +79,7 @@ Map terrain tiles are configured separately from claim SavedData. The default ca
 
 ## Audit And Purge
 
-Audit logging is enabled by default. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.
+Audit logging is enabled by default. Archive retention defaults to `archive.retentionDays = 365`; old archive records are pruned when new archives are created. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.
 
 ## Commands And Messages
 
