@@ -9,6 +9,7 @@ import com.nadirkhoulali.ucs.service.UcsServices;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 public final class UcsServerLifecycle {
     private final UcsServices services;
@@ -38,6 +39,8 @@ public final class UcsServerLifecycle {
             );
         }
 
+        services.initializeClaimRepository(event.getServer());
+
         if (UcsCommonConfig.LOG_STARTUP_SUMMARY.get()) {
             UcsMod.LOGGER.info(
                     "{} server lifecycle ready. configSchema={}, enabledDimensions={}, services={}",
@@ -47,5 +50,10 @@ public final class UcsServerLifecycle {
                     services.summary()
             );
         }
+    }
+
+    @SubscribeEvent
+    public void onServerStopping(ServerStoppingEvent event) {
+        services.clearServerState();
     }
 }

@@ -27,6 +27,7 @@ Project language and scope:
 - [Domain glossary](docs/domain/glossary.md)
 - [ADR 0001: UCS v1 Scope](docs/adr/0001-v1-scope.md)
 - [Configuration guide](docs/configuration.md)
+- [Storage design](docs/storage.md)
 
 See [docs/development/testing.md](docs/development/testing.md) for the unit-test and GameTest validation strategy.
 
