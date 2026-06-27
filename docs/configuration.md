@@ -153,6 +153,8 @@ Tile streaming also uses `mapCache.maxTileRequestsPerPlayer` and `mapCache.maxGl
 
 The first terrain map UI is client-side and can be opened with `/ucs map`, the `ucsmap` client command, or the UCS terrain map keybind. The screen renders cached tile responses, requests visible tiles as the viewport changes, and keeps unknown/error/rate-limited tiles visually distinct from generated terrain.
 
+Claim overlays use the `mapOverlay` color settings. Owner, member, tenant, visitor, banned, and server/admin claims have separate ARGB fill colors, plus shared border, sale accent, and lease accent colors. Server-owned claims are omitted from ordinary overlay responses unless the viewer has UCS admin or bypass permission.
+
 ## Audit And Purge
 
 Audit logging is enabled by default. Archive retention defaults to `archive.retentionDays = 365`; old archive records are pruned when new archives are created. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.

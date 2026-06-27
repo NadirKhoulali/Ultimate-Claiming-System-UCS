@@ -20,6 +20,7 @@ public record UcsConfigSnapshot(
         ClaimTaxPolicy claimTax,
         NonpaymentPolicy nonpayment,
         MapCachePolicy mapCache,
+        MapOverlayPolicy mapOverlay,
         AuditPolicy audit,
         ArchivePolicy archive,
         InactivePurgePolicy inactivePurge,
@@ -61,6 +62,52 @@ public record UcsConfigSnapshot(
                 claimTax,
                 NonpaymentPolicy.defaults(),
                 mapCache,
+                MapOverlayPolicy.defaults(),
+                audit,
+                archive,
+                inactivePurge,
+                commands,
+                messages
+        );
+    }
+
+    public UcsConfigSnapshot(
+            int schemaVersion,
+            boolean logStartupSummary,
+            DimensionPolicy dimensions,
+            ClaimLimitPolicy claimLimits,
+            ClaimMetadataPolicy claimMetadata,
+            ClaimTeleportPolicy claimTeleport,
+            RoleDefaults roles,
+            BanPolicy bans,
+            FlagDefaults flags,
+            ProtectionPolicy protection,
+            EconomyPolicy economy,
+            ClaimTaxPolicy claimTax,
+            NonpaymentPolicy nonpayment,
+            MapCachePolicy mapCache,
+            AuditPolicy audit,
+            ArchivePolicy archive,
+            InactivePurgePolicy inactivePurge,
+            CommandPolicy commands,
+            MessagePolicy messages
+    ) {
+        this(
+                schemaVersion,
+                logStartupSummary,
+                dimensions,
+                claimLimits,
+                claimMetadata,
+                claimTeleport,
+                roles,
+                bans,
+                flags,
+                protection,
+                economy,
+                claimTax,
+                nonpayment,
+                mapCache,
+                MapOverlayPolicy.defaults(),
                 audit,
                 archive,
                 inactivePurge,
@@ -103,6 +150,7 @@ public record UcsConfigSnapshot(
                 ClaimTaxPolicy.defaults(),
                 NonpaymentPolicy.defaults(),
                 mapCache,
+                MapOverlayPolicy.defaults(),
                 audit,
                 archive,
                 inactivePurge,
@@ -261,6 +309,32 @@ public record UcsConfigSnapshot(
             int maxTileRequestsPerPlayer,
             int maxGlobalTileJobs
     ) {
+    }
+
+    public record MapOverlayPolicy(
+            int ownerColor,
+            int memberColor,
+            int tenantColor,
+            int visitorColor,
+            int bannedColor,
+            int serverColor,
+            int borderColor,
+            int saleAccentColor,
+            int leaseAccentColor
+    ) {
+        public static MapOverlayPolicy defaults() {
+            return new MapOverlayPolicy(
+                    UcsConfigDefaults.MAP_OVERLAY_OWNER_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_MEMBER_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_TENANT_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_VISITOR_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_BANNED_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_SERVER_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_BORDER_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_SALE_ACCENT_COLOR,
+                    UcsConfigDefaults.MAP_OVERLAY_LEASE_ACCENT_COLOR
+            );
+        }
     }
 
     public record AuditPolicy(

@@ -53,6 +53,7 @@ public final class UcsConfigValidators {
         validateClaimTax(config.claimTax(), report);
         validateNonpayment(config.nonpayment(), report);
         validateMapCache(config.mapCache(), report);
+        validateMapOverlay(config.mapOverlay(), report);
         validateAudit(config.audit(), report);
         validateArchive(config.archive(), report);
         validateInactivePurge(config.inactivePurge(), report);
@@ -238,6 +239,21 @@ public final class UcsConfigValidators {
         requireAtLeast("mapCache.maxGlobalTileJobs", mapCache.maxGlobalTileJobs(), 1, report);
     }
 
+    private static void validateMapOverlay(
+            UcsConfigSnapshot.MapOverlayPolicy overlay,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireVisibleColor("mapOverlay.ownerColor", overlay.ownerColor(), report);
+        requireVisibleColor("mapOverlay.memberColor", overlay.memberColor(), report);
+        requireVisibleColor("mapOverlay.tenantColor", overlay.tenantColor(), report);
+        requireVisibleColor("mapOverlay.visitorColor", overlay.visitorColor(), report);
+        requireVisibleColor("mapOverlay.bannedColor", overlay.bannedColor(), report);
+        requireVisibleColor("mapOverlay.serverColor", overlay.serverColor(), report);
+        requireVisibleColor("mapOverlay.borderColor", overlay.borderColor(), report);
+        requireVisibleColor("mapOverlay.saleAccentColor", overlay.saleAccentColor(), report);
+        requireVisibleColor("mapOverlay.leaseAccentColor", overlay.leaseAccentColor(), report);
+    }
+
     private static void validateAudit(
             UcsConfigSnapshot.AuditPolicy audit,
             UcsConfigValidationReport.Builder report
@@ -353,6 +369,12 @@ public final class UcsConfigValidators {
     ) {
         if (value < minimum) {
             report.error(fieldName + " must be at least " + minimum);
+        }
+    }
+
+    private static void requireVisibleColor(String fieldName, int argb, UcsConfigValidationReport.Builder report) {
+        if (((argb >>> 24) & 0xFF) == 0) {
+            report.error(fieldName + " must have a visible alpha channel");
         }
     }
 }

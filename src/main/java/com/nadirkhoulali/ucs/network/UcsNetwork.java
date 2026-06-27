@@ -1,10 +1,12 @@
 package com.nadirkhoulali.ucs.network;
 
 import com.nadirkhoulali.ucs.UcsMod;
+import com.nadirkhoulali.ucs.client.UcsClaimOverlayClientCache;
 import com.nadirkhoulali.ucs.client.UcsTerrainTileClientCache;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.MapTileKey;
+import com.nadirkhoulali.ucs.map.ClaimMapOverlayEntry;
 import com.nadirkhoulali.ucs.map.FileMapTileCache;
 import com.nadirkhoulali.ucs.map.LoadedServerTerrainChunkSampler;
 import com.nadirkhoulali.ucs.map.MapTileCacheReadResult;
@@ -12,6 +14,7 @@ import com.nadirkhoulali.ucs.map.MapTileCacheReadStatus;
 import com.nadirkhoulali.ucs.map.TerrainTileGenerationResult;
 import com.nadirkhoulali.ucs.map.TerrainTileResponseStatus;
 import com.nadirkhoulali.ucs.map.TerrainTileStreamResponse;
+import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -43,7 +46,9 @@ public final class UcsNetwork {
         PayloadRegistrar registrar = event.registrar(NETWORK_VERSION);
         registrar.playToServer(TerrainTileRequestPayload.TYPE, TerrainTileRequestPayload.STREAM_CODEC, (payload, context) -> handleTileRequest(payload, context, services));
         registrar.playToServer(TerrainTileCancelPayload.TYPE, TerrainTileCancelPayload.STREAM_CODEC, (payload, context) -> handleTileCancel(payload, context, services));
+        registrar.playToServer(ClaimOverlayRequestPayload.TYPE, ClaimOverlayRequestPayload.STREAM_CODEC, (payload, context) -> handleClaimOverlayRequest(payload, context, services));
         registrar.playToClient(TerrainTileResponsePayload.TYPE, TerrainTileResponsePayload.STREAM_CODEC, (payload, context) -> UcsTerrainTileClientCache.accept(payload));
+        registrar.playToClient(ClaimOverlayResponsePayload.TYPE, ClaimOverlayResponsePayload.STREAM_CODEC, (payload, context) -> UcsClaimOverlayClientCache.accept(payload));
         registrar.playToClient(OpenTerrainMapPayload.TYPE, OpenTerrainMapPayload.STREAM_CODEC, (payload, context) -> handleOpenMap(payload));
     }
 
@@ -57,6 +62,29 @@ public final class UcsNetwork {
         if (context.player() instanceof ServerPlayer player) {
             services.terrainTileStreams().cancel(player.getUUID(), payload.requestId());
         }
+    }
+
+    private static void handleClaimOverlayRequest(ClaimOverlayRequestPayload payload, IPayloadContext context, UcsServices services) {
+        if (!(context.player() instanceof ServerPlayer player)) {
+            return;
+        }
+        if (services.claimRepository().isEmpty() || !services.permissions().has(player, UcsPermission.MAP_VIEW)) {
+            PacketDistributor.sendToPlayer(player, new ClaimOverlayResponsePayload(payload.requestId(), payload.dimension(), List.of()));
+            return;
+        }
+
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        boolean canViewServerClaims = services.permissions().has(player, UcsPermission.ADMIN)
+                || services.permissions().has(player, UcsPermission.BYPASS);
+        List<ClaimMapOverlayEntry> entries = services.claimMapOverlays().visibleOverlays(
+                services.claimRepository().orElseThrow(),
+                config,
+                player.getUUID(),
+                payload.dimension(),
+                payload.tiles(),
+                canViewServerClaims
+        );
+        PacketDistributor.sendToPlayer(player, new ClaimOverlayResponsePayload(payload.requestId(), payload.dimension(), entries));
     }
 
     private static void handleTileRequest(TerrainTileRequestPayload payload, IPayloadContext context, UcsServices services) {

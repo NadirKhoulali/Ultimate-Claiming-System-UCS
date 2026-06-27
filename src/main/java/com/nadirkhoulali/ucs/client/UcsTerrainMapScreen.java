@@ -1,6 +1,8 @@
 package com.nadirkhoulali.ucs.client;
 
 import com.nadirkhoulali.ucs.core.model.MapTileKey;
+import com.nadirkhoulali.ucs.map.ClaimMapOverlayChunk;
+import com.nadirkhoulali.ucs.map.ClaimMapOverlayEntry;
 import com.nadirkhoulali.ucs.map.TerrainTilePayload;
 import com.nadirkhoulali.ucs.map.TerrainTileResponseStatus;
 import com.nadirkhoulali.ucs.map.TerrainTileStreamResponse;
@@ -12,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 public final class UcsTerrainMapScreen extends Screen {
@@ -32,6 +35,7 @@ public final class UcsTerrainMapScreen extends Screen {
     private int zoom;
     private int activeRequestId = -1;
     private List<MapTileKey> requestedTiles = List.of();
+    private String selectedClaimId = "";
 
     public UcsTerrainMapScreen(String dimension, int centerBlockX, int centerBlockZ, int zoom) {
         super(Component.translatable("screen.ucs.map.title"));
@@ -52,10 +56,22 @@ public final class UcsTerrainMapScreen extends Screen {
         graphics.fill(0, 0, width, height, 0xFF0D1117);
         graphics.fill(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(), 0xFF151A21);
         renderTiles(graphics, bounds);
+        renderClaimOverlays(graphics, bounds);
         renderPlayerMarker(graphics, bounds);
         renderFrame(graphics, bounds);
-        renderHeader(graphics, bounds);
+        renderHeader(graphics, bounds, mouseX, mouseY);
         super.render(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && insideMap(mouseX, mouseY)) {
+            selectedClaimId = overlayAt(mouseX, mouseY, mapBounds())
+                    .map(ClaimMapOverlayEntry::claimId)
+                    .orElse("");
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
@@ -151,7 +167,9 @@ public final class UcsTerrainMapScreen extends Screen {
         cancelActiveRequest();
         activeRequestId = UcsTerrainMapClient.nextRequestId();
         requestedTiles = visibleTiles;
-        if (!UcsTerrainMapClient.requestTiles(activeRequestId, visibleTiles)) {
+        boolean requestedTerrain = UcsTerrainMapClient.requestTiles(activeRequestId, visibleTiles);
+        boolean requestedOverlays = UcsTerrainMapClient.requestClaimOverlays(activeRequestId, dimension, visibleTiles);
+        if (!requestedTerrain && !requestedOverlays) {
             activeRequestId = -1;
         }
     }
@@ -210,6 +228,32 @@ public final class UcsTerrainMapScreen extends Screen {
         }
     }
 
+    private void renderClaimOverlays(GuiGraphics graphics, MapBounds bounds) {
+        if (activeRequestId < 0) {
+            return;
+        }
+        for (ClaimMapOverlayEntry entry : UcsClaimOverlayClientCache.entries(activeRequestId, dimension)) {
+            for (ClaimMapOverlayChunk chunk : entry.chunks()) {
+                ChunkScreenBounds chunkBounds = chunkScreenBounds(chunk, bounds);
+                fillClipped(graphics, bounds, chunkBounds.left(), chunkBounds.top(), chunkBounds.right(), chunkBounds.bottom(), entry.fillColor());
+                drawChunkBorder(graphics, bounds, chunkBounds, entry.borderColor());
+                if (entry.forSale()) {
+                    fillClipped(graphics, bounds, chunkBounds.left(), chunkBounds.top(), chunkBounds.right(), chunkBounds.top() + 2, entry.saleAccentColor());
+                }
+                if (entry.leased()) {
+                    fillClipped(graphics, bounds, chunkBounds.left(), chunkBounds.bottom() - 2, chunkBounds.right(), chunkBounds.bottom(), entry.leaseAccentColor());
+                }
+            }
+        }
+    }
+
+    private void drawChunkBorder(GuiGraphics graphics, MapBounds mapBounds, ChunkScreenBounds chunkBounds, int color) {
+        fillClipped(graphics, mapBounds, chunkBounds.left(), chunkBounds.top(), chunkBounds.right(), chunkBounds.top() + 1, color);
+        fillClipped(graphics, mapBounds, chunkBounds.left(), chunkBounds.bottom() - 1, chunkBounds.right(), chunkBounds.bottom(), color);
+        fillClipped(graphics, mapBounds, chunkBounds.left(), chunkBounds.top(), chunkBounds.left() + 1, chunkBounds.bottom(), color);
+        fillClipped(graphics, mapBounds, chunkBounds.right() - 1, chunkBounds.top(), chunkBounds.right(), chunkBounds.bottom(), color);
+    }
+
     private void drawTerrainPayload(GuiGraphics graphics, MapBounds mapBounds, UcsTerrainMapViewport.TileBounds tileBounds, TerrainTilePayload payload) {
         int sampleStep = Math.max(1, payload.size() / 32);
         double cellScale = tileBounds.width() / (double) payload.size();
@@ -266,7 +310,7 @@ public final class UcsTerrainMapScreen extends Screen {
         graphics.fill(bounds.right(), bounds.top() - 1, bounds.right() + 1, bounds.bottom() + 1, 0xFF3D4856);
     }
 
-    private void renderHeader(GuiGraphics graphics, MapBounds bounds) {
+    private void renderHeader(GuiGraphics graphics, MapBounds bounds, int mouseX, int mouseY) {
         graphics.fill(0, 0, width, HEADER_HEIGHT, 0xF00D1117);
         graphics.fill(0, height - FOOTER_HEIGHT, width, height, 0xF00D1117);
         graphics.drawString(font, title, 12, 6, 0xFFEAF2F8, false);
@@ -290,8 +334,11 @@ public final class UcsTerrainMapScreen extends Screen {
             graphics.drawString(font, tileStatus, Math.max(12, width - textWidth - 12), 18, 0xFFB6C2CF, false);
         }
 
-        Component footer = Component.translatable("screen.ucs.map.footer", visibleTiles(bounds).size());
-        graphics.drawString(font, footer, 12, height - 13, 0xFF7F8B99, false);
+        String footer = overlayAt(mouseX, mouseY, bounds)
+                .or(() -> selectedOverlay(activeRequestId, dimension))
+                .map(this::overlayFooter)
+                .orElse(Component.translatable("screen.ucs.map.footer", visibleTiles(bounds).size()).getString());
+        graphics.drawString(font, abbreviate(footer, Math.max(12, width / 6)), 12, height - 13, 0xFF7F8B99, false);
     }
 
     private void fillClipped(GuiGraphics graphics, MapBounds bounds, int left, int top, int right, int bottom, int color) {
@@ -314,6 +361,64 @@ public final class UcsTerrainMapScreen extends Screen {
                 bounds.height(),
                 MAX_REQUEST_TILES
         );
+    }
+
+    private Optional<ClaimMapOverlayEntry> overlayAt(double mouseX, double mouseY, MapBounds bounds) {
+        if (activeRequestId < 0 || !bounds.contains((int) mouseX, (int) mouseY)) {
+            return Optional.empty();
+        }
+        List<ClaimMapOverlayEntry> entries = UcsClaimOverlayClientCache.entries(activeRequestId, dimension);
+        for (int entryIndex = entries.size() - 1; entryIndex >= 0; entryIndex--) {
+            ClaimMapOverlayEntry entry = entries.get(entryIndex);
+            for (ClaimMapOverlayChunk chunk : entry.chunks()) {
+                if (chunkScreenBounds(chunk, bounds).contains((int) mouseX, (int) mouseY)) {
+                    return Optional.of(entry);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<ClaimMapOverlayEntry> selectedOverlay(int requestId, String dimension) {
+        if (selectedClaimId.isBlank() || requestId < 0) {
+            return Optional.empty();
+        }
+        return UcsClaimOverlayClientCache.entries(requestId, dimension).stream()
+                .filter(entry -> entry.claimId().equals(selectedClaimId))
+                .findFirst();
+    }
+
+    private String overlayFooter(ClaimMapOverlayEntry entry) {
+        String market = entry.forSale()
+                ? "sale"
+                : entry.leased() ? "lease" : "-";
+        return Component.translatable(
+                "screen.ucs.map.overlay",
+                entry.displayName(),
+                entry.relation().name().toLowerCase(Locale.ROOT),
+                entry.ownerType().name().toLowerCase(Locale.ROOT),
+                entry.chunks().size(),
+                market
+        ).getString();
+    }
+
+    private ChunkScreenBounds chunkScreenBounds(ClaimMapOverlayChunk chunk, MapBounds bounds) {
+        int scale = UcsTerrainMapViewport.blockScale(zoom);
+        long minBlockX = (long) chunk.x() * 16L;
+        long minBlockZ = (long) chunk.z() * 16L;
+        long maxBlockX = minBlockX + 16L;
+        long maxBlockZ = minBlockZ + 16L;
+        int left = (int) Math.round(bounds.centerX() + (minBlockX - centerBlockX) / scale);
+        int top = (int) Math.round(bounds.centerY() + (minBlockZ - centerBlockZ) / scale);
+        int right = (int) Math.round(bounds.centerX() + (maxBlockX - centerBlockX) / scale);
+        int bottom = (int) Math.round(bounds.centerY() + (maxBlockZ - centerBlockZ) / scale);
+        if (right <= left) {
+            right = left + 1;
+        }
+        if (bottom <= top) {
+            bottom = top + 1;
+        }
+        return new ChunkScreenBounds(left, top, right, bottom);
     }
 
     private void cycleDimension(int offset) {
@@ -378,6 +483,12 @@ public final class UcsTerrainMapScreen extends Screen {
             return top + height() / 2.0D;
         }
 
+        boolean contains(int x, int y) {
+            return x >= left && x < right && y >= top && y < bottom;
+        }
+    }
+
+    private record ChunkScreenBounds(int left, int top, int right, int bottom) {
         boolean contains(int x, int y) {
             return x >= left && x < right && y >= top && y < bottom;
         }

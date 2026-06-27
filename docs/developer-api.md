@@ -175,6 +175,8 @@ Tile streaming uses NeoForge play payloads under `com.nadirkhoulali.ucs.network`
 
 The initial full-screen terrain map lives under `com.nadirkhoulali.ucs.client`. `UcsTerrainMapViewport` owns the pure viewport-to-tile math, while `UcsTerrainMapScreen` handles client input, request cancellation, cached tile rendering, and player-marker placement. `/ucs map` sends `OpenTerrainMapPayload` so the server can open the client screen after permission checks without exposing raw world data.
 
+Claim overlays are filtered server-side by `ClaimMapOverlayService` and streamed with `ClaimOverlayRequestPayload` / `ClaimOverlayResponsePayload`. Overlay entries include only metadata the viewer is allowed to know: relation, owner type/key, display name, visible chunk coordinates, sale/lease state, and configured ARGB colors. Server-owned claims are hidden from ordinary map viewers unless the player has UCS admin or bypass permission.
+
 ## Events
 
 Claim events live under `com.nadirkhoulali.ucs.api.event`:

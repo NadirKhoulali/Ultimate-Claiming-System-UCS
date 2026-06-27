@@ -75,6 +75,16 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.IntValue MAP_MAX_TILE_REQUESTS_PER_PLAYER;
     public static final ModConfigSpec.IntValue MAP_MAX_GLOBAL_TILE_JOBS;
 
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_OWNER_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_MEMBER_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_TENANT_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_VISITOR_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_BANNED_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_SERVER_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_BORDER_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_SALE_ACCENT_COLOR;
+    public static final ModConfigSpec.IntValue MAP_OVERLAY_LEASE_ACCENT_COLOR;
+
     public static final ModConfigSpec.BooleanValue AUDIT_ENABLED;
     public static final ModConfigSpec.IntValue AUDIT_MAX_ENTRIES_PER_CLAIM;
     public static final ModConfigSpec.IntValue AUDIT_RETENTION_DAYS;
@@ -299,6 +309,18 @@ public final class UcsCommonConfig {
                 .defineInRange("maxGlobalTileJobs", 512, 1, 1_000_000);
         BUILDER.pop();
 
+        BUILDER.push("mapOverlay");
+        MAP_OVERLAY_OWNER_COLOR = color("ownerColor", "ARGB fill color for claims owned by the viewing player.", UcsConfigDefaults.MAP_OVERLAY_OWNER_COLOR);
+        MAP_OVERLAY_MEMBER_COLOR = color("memberColor", "ARGB fill color for claims where the viewer is a member.", UcsConfigDefaults.MAP_OVERLAY_MEMBER_COLOR);
+        MAP_OVERLAY_TENANT_COLOR = color("tenantColor", "ARGB fill color for claims where the viewer is an active tenant.", UcsConfigDefaults.MAP_OVERLAY_TENANT_COLOR);
+        MAP_OVERLAY_VISITOR_COLOR = color("visitorColor", "ARGB fill color for visible claims where the viewer is a visitor.", UcsConfigDefaults.MAP_OVERLAY_VISITOR_COLOR);
+        MAP_OVERLAY_BANNED_COLOR = color("bannedColor", "ARGB fill color for claims where the viewer is banned.", UcsConfigDefaults.MAP_OVERLAY_BANNED_COLOR);
+        MAP_OVERLAY_SERVER_COLOR = color("serverColor", "ARGB fill color for server/admin claims visible to staff.", UcsConfigDefaults.MAP_OVERLAY_SERVER_COLOR);
+        MAP_OVERLAY_BORDER_COLOR = color("borderColor", "ARGB border color for claim overlay chunk edges.", UcsConfigDefaults.MAP_OVERLAY_BORDER_COLOR);
+        MAP_OVERLAY_SALE_ACCENT_COLOR = color("saleAccentColor", "ARGB accent color for claim sale listings.", UcsConfigDefaults.MAP_OVERLAY_SALE_ACCENT_COLOR);
+        MAP_OVERLAY_LEASE_ACCENT_COLOR = color("leaseAccentColor", "ARGB accent color for active or offered claim leases.", UcsConfigDefaults.MAP_OVERLAY_LEASE_ACCENT_COLOR);
+        BUILDER.pop();
+
         BUILDER.push("audit");
         AUDIT_ENABLED = BUILDER
                 .comment("Whether UCS records admin, economy, and claim-management audit entries.")
@@ -433,6 +455,17 @@ public final class UcsCommonConfig {
                         MAP_MAX_TILE_REQUESTS_PER_PLAYER.get(),
                         MAP_MAX_GLOBAL_TILE_JOBS.get()
                 ),
+                new UcsConfigSnapshot.MapOverlayPolicy(
+                        MAP_OVERLAY_OWNER_COLOR.get(),
+                        MAP_OVERLAY_MEMBER_COLOR.get(),
+                        MAP_OVERLAY_TENANT_COLOR.get(),
+                        MAP_OVERLAY_VISITOR_COLOR.get(),
+                        MAP_OVERLAY_BANNED_COLOR.get(),
+                        MAP_OVERLAY_SERVER_COLOR.get(),
+                        MAP_OVERLAY_BORDER_COLOR.get(),
+                        MAP_OVERLAY_SALE_ACCENT_COLOR.get(),
+                        MAP_OVERLAY_LEASE_ACCENT_COLOR.get()
+                ),
                 new UcsConfigSnapshot.AuditPolicy(
                         AUDIT_ENABLED.get(),
                         AUDIT_MAX_ENTRIES_PER_CLAIM.get(),
@@ -447,5 +480,11 @@ public final class UcsCommonConfig {
                 new UcsConfigSnapshot.CommandPolicy(PERMISSION_NODE_PREFIX.get(), OP_FALLBACK_ENABLED.get()),
                 new UcsConfigSnapshot.MessagePolicy(DEFAULT_LOCALE.get(), SEND_ACTION_BAR_DENIALS.get())
         );
+    }
+
+    private static ModConfigSpec.IntValue color(String path, String comment, int defaultValue) {
+        return BUILDER
+                .comment(comment + " Use signed ARGB integer notation; alpha must be nonzero.")
+                .defineInRange(path, defaultValue, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
 }

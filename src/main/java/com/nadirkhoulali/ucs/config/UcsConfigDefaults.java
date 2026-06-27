@@ -6,6 +6,15 @@ public final class UcsConfigDefaults {
     public static final int CURRENT_SCHEMA_VERSION = 1;
     public static final String PERMISSION_NODE_PREFIX = "ucs";
     public static final boolean OP_FALLBACK_ENABLED = true;
+    public static final int MAP_OVERLAY_OWNER_COLOR = (int) 0x8A2EC8A6;
+    public static final int MAP_OVERLAY_MEMBER_COLOR = (int) 0x8A4F8DF7;
+    public static final int MAP_OVERLAY_TENANT_COLOR = (int) 0x8A25B9D7;
+    public static final int MAP_OVERLAY_VISITOR_COLOR = (int) 0x7AD9B949;
+    public static final int MAP_OVERLAY_BANNED_COLOR = (int) 0x8AE05A5A;
+    public static final int MAP_OVERLAY_SERVER_COLOR = (int) 0x8AB97AEF;
+    public static final int MAP_OVERLAY_BORDER_COLOR = (int) 0xE6F1F5F9;
+    public static final int MAP_OVERLAY_SALE_ACCENT_COLOR = (int) 0xFFE3B341;
+    public static final int MAP_OVERLAY_LEASE_ACCENT_COLOR = (int) 0xFF35C2D0;
 
     public static final List<String> ENABLED_DIMENSIONS = List.of(
             "minecraft:overworld",

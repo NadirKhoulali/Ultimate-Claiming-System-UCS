@@ -1,6 +1,7 @@
 package com.nadirkhoulali.ucs.client;
 
 import com.nadirkhoulali.ucs.core.model.MapTileKey;
+import com.nadirkhoulali.ucs.network.ClaimOverlayRequestPayload;
 import com.nadirkhoulali.ucs.network.OpenTerrainMapPayload;
 import com.nadirkhoulali.ucs.network.TerrainTileCancelPayload;
 import com.nadirkhoulali.ucs.network.TerrainTileRequestPayload;
@@ -45,6 +46,15 @@ public final class UcsTerrainMapClient {
             return false;
         }
         PacketDistributor.sendToServer(new TerrainTileRequestPayload(requestId, keys));
+        return true;
+    }
+
+    public static boolean requestClaimOverlays(int requestId, String dimension, List<MapTileKey> keys) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.getConnection() == null || keys.isEmpty()) {
+            return false;
+        }
+        PacketDistributor.sendToServer(new ClaimOverlayRequestPayload(requestId, dimension, keys));
         return true;
     }
 
