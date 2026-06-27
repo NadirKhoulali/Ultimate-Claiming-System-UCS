@@ -172,6 +172,8 @@ public final class UcsConfigValidators {
         validateRegistryReferenceList("protection.buttonTargetIds", protection.buttonTargetIds(), report);
         validateRegistryReferenceList("protection.leverTargetIds", protection.leverTargetIds(), report);
         validateRegistryReferenceList("protection.redstoneTargetIds", protection.redstoneTargetIds(), report);
+        validateRegistryReferenceList("protection.entityTargetIds", protection.entityTargetIds(), report);
+        validateRegistryReferenceList("protection.vehicleTargetIds", protection.vehicleTargetIds(), report);
         for (String ignored : protection.ignoredBlockIds()) {
             if (protection.specialBlockIds().contains(ignored)) {
                 report.warning("Block " + ignored + " is both ignored and special; ignored takes precedence");

@@ -18,8 +18,12 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -149,6 +153,87 @@ public final class ClaimProtectionService {
                 : lastAllowed;
     }
 
+    public ProtectionDecision checkEntityInteraction(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            Entity target,
+            Player player
+    ) {
+        Optional<FlagId> flagId = entityInteractionFlagForEntity(config, target);
+        if (flagId.isEmpty()) {
+            return ProtectionDecision.abstain(UcsBuiltInProtectionFlags.ENTITY_INTERACT, "unprotected_entity_target", Set.of());
+        }
+        return checkClaimAction(claimService, registry, config, level, target.blockPosition(), flagId.orElseThrow(), player);
+    }
+
+    public ProtectionDecision checkEntityDamage(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            Entity target,
+            @Nullable Player player
+    ) {
+        if (!isProtectedEntity(config, target)) {
+            return ProtectionDecision.abstain(UcsBuiltInProtectionFlags.ENTITY_DAMAGE, "unprotected_entity_target", Set.of());
+        }
+        return checkClaimAction(claimService, registry, config, level, target.blockPosition(), UcsBuiltInProtectionFlags.ENTITY_DAMAGE, player);
+    }
+
+    public ProtectionDecision checkVehicleUse(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            Entity vehicle,
+            @Nullable Player player
+    ) {
+        if (!isVehicleEntity(config, vehicle)) {
+            return ProtectionDecision.abstain(UcsBuiltInProtectionFlags.VEHICLE_USE, "unprotected_vehicle_target", Set.of());
+        }
+        return checkClaimAction(claimService, registry, config, level, vehicle.blockPosition(), UcsBuiltInProtectionFlags.VEHICLE_USE, player);
+    }
+
+    public ProtectionDecision checkItemPickup(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            ItemEntity item,
+            Player player
+    ) {
+        return checkClaimAction(claimService, registry, config, level, item.blockPosition(), UcsBuiltInProtectionFlags.ITEM_PICKUP, player);
+    }
+
+    public ProtectionDecision checkItemDrop(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            ItemEntity item,
+            Player player
+    ) {
+        return checkClaimAction(claimService, registry, config, level, item.blockPosition(), UcsBuiltInProtectionFlags.ITEM_DROP, player);
+    }
+
+    public Optional<Player> playerActorFromDamageSource(DamageSource source) {
+        Objects.requireNonNull(source, "source");
+        Entity causingEntity = source.getEntity();
+        if (causingEntity instanceof Player player) {
+            return Optional.of(player);
+        }
+        Entity directEntity = source.getDirectEntity();
+        if (directEntity instanceof Player player) {
+            return Optional.of(player);
+        }
+        if (directEntity instanceof Projectile projectile && projectile.getOwner() instanceof Player player) {
+            return Optional.of(player);
+        }
+        return Optional.empty();
+    }
+
     public ProtectionDecision evaluateClaimAction(
             ProtectionFlagRegistry registry,
             UcsConfigSnapshot config,
@@ -189,6 +274,30 @@ public final class ClaimProtectionService {
 
     public Optional<FlagId> interactionFlagForBlockId(UcsConfigSnapshot config, String blockId) {
         return interactionFlagForTarget(config, blockId, tagId -> false);
+    }
+
+    public Optional<FlagId> entityInteractionFlagForEntity(UcsConfigSnapshot config, Entity entity) {
+        Objects.requireNonNull(entity, "entity");
+        String entityTypeId = entityTypeId(entity);
+        return entityInteractionFlagForTarget(config, entityTypeId, tagId -> entityTypeMatchesTag(entity, tagId));
+    }
+
+    public Optional<FlagId> entityInteractionFlagForEntityTypeId(UcsConfigSnapshot config, String entityTypeId) {
+        return entityInteractionFlagForTarget(config, entityTypeId, tagId -> false);
+    }
+
+    public boolean isProtectedEntityTypeId(UcsConfigSnapshot config, String entityTypeId) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(entityTypeId, "entityTypeId");
+        UcsConfigSnapshot.ProtectionPolicy protection = config.protection();
+        return protection.entityTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagId -> false))
+                || protection.vehicleTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagId -> false));
+    }
+
+    public boolean isVehicleEntityTypeId(UcsConfigSnapshot config, String entityTypeId) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(entityTypeId, "entityTypeId");
+        return config.protection().vehicleTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagId -> false));
     }
 
     public boolean matchesConfiguredTarget(List<String> configuredTargets, BlockState state) {
@@ -259,6 +368,37 @@ public final class ClaimProtectionService {
         return Optional.empty();
     }
 
+    private Optional<FlagId> entityInteractionFlagForTarget(
+            UcsConfigSnapshot config,
+            String entityTypeId,
+            Predicate<String> tagMatcher
+    ) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(entityTypeId, "entityTypeId");
+        UcsConfigSnapshot.ProtectionPolicy protection = config.protection();
+        if (protection.vehicleTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.VEHICLE_USE);
+        }
+        if (protection.entityTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.ENTITY_INTERACT);
+        }
+        return Optional.empty();
+    }
+
+    private boolean isProtectedEntity(UcsConfigSnapshot config, Entity entity) {
+        Objects.requireNonNull(entity, "entity");
+        String entityTypeId = entityTypeId(entity);
+        UcsConfigSnapshot.ProtectionPolicy protection = config.protection();
+        return protection.entityTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagId -> entityTypeMatchesTag(entity, tagId)))
+                || protection.vehicleTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagId -> entityTypeMatchesTag(entity, tagId)));
+    }
+
+    private boolean isVehicleEntity(UcsConfigSnapshot config, Entity entity) {
+        Objects.requireNonNull(entity, "entity");
+        String entityTypeId = entityTypeId(entity);
+        return config.protection().vehicleTargetIds().stream().anyMatch(target -> matchesTarget(target, entityTypeId, tagId -> entityTypeMatchesTag(entity, tagId)));
+    }
+
     private static boolean matchesTarget(String target, String blockId, Predicate<String> tagMatcher) {
         if (target.startsWith("#")) {
             return tagMatcher.test(target.substring(1));
@@ -273,6 +413,20 @@ public final class ClaimProtectionService {
         } catch (RuntimeException exception) {
             return false;
         }
+    }
+
+    private static boolean entityTypeMatchesTag(Entity entity, String tagId) {
+        try {
+            TagKey<EntityType<?>> tagKey = TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.parse(tagId));
+            return entity.getType().is(tagKey);
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private static String entityTypeId(Entity entity) {
+        Objects.requireNonNull(entity, "entity");
+        return BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
     }
 
     private static boolean sameClaim(Optional<ClaimView> sourceClaim, ClaimView targetClaim) {

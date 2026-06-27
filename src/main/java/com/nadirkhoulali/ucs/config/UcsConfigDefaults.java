@@ -33,6 +33,10 @@ public final class UcsConfigDefaults {
             "ucs:lever_use",
             "ucs:redstone_use",
             "ucs:entity_interact",
+            "ucs:entity_damage",
+            "ucs:vehicle_use",
+            "ucs:item_pickup",
+            "ucs:item_drop",
             "ucs:pvp",
             "ucs:explosion",
             "ucs:fire_spread",
@@ -102,6 +106,50 @@ public final class UcsConfigDefaults {
             "minecraft:note_block",
             "minecraft:tripwire",
             "minecraft:tripwire_hook"
+    );
+
+    public static final List<String> DEFAULT_ENTITY_TARGET_IDS = List.of(
+            "minecraft:allay",
+            "minecraft:armor_stand",
+            "minecraft:axolotl",
+            "minecraft:bee",
+            "minecraft:camel",
+            "minecraft:cat",
+            "minecraft:chicken",
+            "minecraft:cow",
+            "minecraft:donkey",
+            "minecraft:fox",
+            "minecraft:frog",
+            "minecraft:glow_item_frame",
+            "minecraft:goat",
+            "minecraft:horse",
+            "minecraft:item_frame",
+            "minecraft:llama",
+            "minecraft:mooshroom",
+            "minecraft:mule",
+            "minecraft:painting",
+            "minecraft:parrot",
+            "minecraft:pig",
+            "minecraft:rabbit",
+            "minecraft:sheep",
+            "minecraft:sniffer",
+            "minecraft:strider",
+            "minecraft:trader_llama",
+            "minecraft:turtle",
+            "minecraft:villager",
+            "minecraft:wandering_trader",
+            "minecraft:wolf"
+    );
+
+    public static final List<String> DEFAULT_VEHICLE_TARGET_IDS = List.of(
+            "minecraft:boat",
+            "minecraft:chest_boat",
+            "minecraft:minecart",
+            "minecraft:chest_minecart",
+            "minecraft:command_block_minecart",
+            "minecraft:furnace_minecart",
+            "minecraft:hopper_minecart",
+            "minecraft:tnt_minecart"
     );
 
     private UcsConfigDefaults() {

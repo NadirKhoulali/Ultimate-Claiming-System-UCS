@@ -98,7 +98,9 @@ public record UcsConfigSnapshot(
             List<String> doorTargetIds,
             List<String> buttonTargetIds,
             List<String> leverTargetIds,
-            List<String> redstoneTargetIds
+            List<String> redstoneTargetIds,
+            List<String> entityTargetIds,
+            List<String> vehicleTargetIds
     ) {
         public ProtectionPolicy(List<String> ignoredBlockIds, List<String> allowedBlockIds, List<String> specialBlockIds) {
             this(
@@ -109,7 +111,9 @@ public record UcsConfigSnapshot(
                     UcsConfigDefaults.DEFAULT_DOOR_TARGET_IDS,
                     UcsConfigDefaults.DEFAULT_BUTTON_TARGET_IDS,
                     UcsConfigDefaults.DEFAULT_LEVER_TARGET_IDS,
-                    UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS
+                    UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS,
+                    UcsConfigDefaults.DEFAULT_ENTITY_TARGET_IDS,
+                    UcsConfigDefaults.DEFAULT_VEHICLE_TARGET_IDS
             );
         }
 
@@ -122,6 +126,8 @@ public record UcsConfigSnapshot(
             buttonTargetIds = List.copyOf(buttonTargetIds);
             leverTargetIds = List.copyOf(leverTargetIds);
             redstoneTargetIds = List.copyOf(redstoneTargetIds);
+            entityTargetIds = List.copyOf(entityTargetIds);
+            vehicleTargetIds = List.copyOf(vehicleTargetIds);
         }
     }
 

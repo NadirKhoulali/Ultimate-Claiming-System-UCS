@@ -259,7 +259,9 @@ class UcsConfigValidatorsTest {
                         List.of("#minecraft:doors"),
                         List.of("#minecraft:buttons"),
                         List.of("minecraft:lever"),
-                        List.of("modded:redstone_bus")
+                        List.of("modded:redstone_bus"),
+                        List.of("#modded:owned_animals", "modded:machine_pet"),
+                        List.of("modded:cart")
                 ),
                 base.economy(),
                 base.mapCache(),
@@ -294,7 +296,9 @@ class UcsConfigValidatorsTest {
                         base.protection().doorTargetIds(),
                         base.protection().buttonTargetIds(),
                         base.protection().leverTargetIds(),
-                        base.protection().redstoneTargetIds()
+                        base.protection().redstoneTargetIds(),
+                        base.protection().entityTargetIds(),
+                        base.protection().vehicleTargetIds()
                 ),
                 base.economy(),
                 base.mapCache(),

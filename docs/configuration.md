@@ -71,6 +71,7 @@ Block build/break protection also has block-id policy lists:
 - `protection.allowedBlockIds` always allows matching blocks even when a claim flag is enabled.
 - `protection.specialBlockIds` uses `ucs:special_block_use` instead of ordinary `ucs:block_break` for destruction checks. Defaults include high-value blocks such as beacons, conduits, dragon eggs, ender chests, respawn anchors, spawners, and vaults.
 - `protection.containerTargetIds`, `doorTargetIds`, `buttonTargetIds`, `leverTargetIds`, and `redstoneTargetIds` classify right-click and boundary-redstone protection targets. Entries can be exact block ids such as `minecraft:barrel` or block tags such as `#minecraft:doors`.
+- `protection.entityTargetIds` and `protection.vehicleTargetIds` classify entity interaction, damage, and mount/use protection targets. Entries can be exact entity type ids or entity type tags.
 
 ## Economy
 

@@ -10,6 +10,12 @@ import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.util.TriState;
+import net.neoforged.neoforge.event.entity.EntityMountEvent;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -21,7 +27,9 @@ import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -154,6 +162,158 @@ public final class UcsServerLifecycle {
     }
 
     @SubscribeEvent
+    public void onEntityInteraction(PlayerInteractEvent.EntityInteract event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkEntityInteraction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getTarget(),
+                event.getEntity()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.FAIL);
+            sendProtectionDenial(event.getEntity(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityInteractionSpecific(PlayerInteractEvent.EntityInteractSpecific event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkEntityInteraction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getTarget(),
+                event.getEntity()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.FAIL);
+            sendProtectionDenial(event.getEntity(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onAttackEntity(AttackEntityEvent event) {
+        if (!(event.getTarget().level() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkEntityDamage(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getTarget(),
+                event.getEntity()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            sendProtectionDenial(event.getEntity(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onLivingIncomingDamage(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity().level() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        Player actor = services.claimProtection().playerActorFromDamageSource(event.getSource()).orElse(null);
+        var decision = services.claimProtection().checkEntityDamage(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getEntity(),
+                actor
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            if (actor != null) {
+                sendProtectionDenial(actor, config, decision.flagId().value(), decision.reason());
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onEntityMount(EntityMountEvent event) {
+        Entity mounted = event.getEntityBeingMounted();
+        if (!event.isMounting()
+                || mounted == null
+                || !(event.getLevel() instanceof ServerLevel level)
+                || services.claimService().isEmpty()) {
+            return;
+        }
+        Player actor = event.getEntityMounting() instanceof Player player ? player : null;
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkVehicleUse(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                mounted,
+                actor
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            if (actor != null) {
+                sendProtectionDenial(actor, config, decision.flagId().value(), decision.reason());
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onItemPickup(ItemEntityPickupEvent.Pre event) {
+        if (!(event.getItemEntity().level() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkItemPickup(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getItemEntity(),
+                event.getPlayer()
+        );
+        if (decision.denied()) {
+            event.setCanPickup(TriState.FALSE);
+            sendProtectionDenial(event.getPlayer(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onItemToss(ItemTossEvent event) {
+        if (!(event.getEntity().level() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkItemDrop(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getEntity(),
+                event.getPlayer()
+        );
+        if (decision.denied() && restoreTossedItem(event)) {
+            event.setCanceled(true);
+            sendProtectionDenial(event.getPlayer(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
     public void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {
         if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
             return;
@@ -221,5 +381,13 @@ public final class UcsServerLifecycle {
             affectedPositions.addAll(structure.getToDestroy());
         }
         return affectedPositions;
+    }
+
+    private static boolean restoreTossedItem(ItemTossEvent event) {
+        ItemStack stack = event.getEntity().getItem().copy();
+        if (stack.isEmpty() || event.getPlayer().getInventory().getFreeSlot() < 0) {
+            return false;
+        }
+        return event.getPlayer().getInventory().add(stack);
     }
 }

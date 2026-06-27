@@ -94,6 +94,8 @@ Claim `flagOverrides` are the persisted per-claim enabled flag set. Config `flag
 
 Interaction targets are classified by configurable exact block ids and `#tag` ids before a flag is evaluated. Containers, doors, buttons, levers, and redstone boundary sources intentionally use separate flags so addons and server configs can tune them independently.
 
+Entity targets use the same exact-id/`#tag` approach for protected entities and vehicles. Player actors are taken directly from interact, attack, pickup, toss, and mount events; damage events also inspect the damage source and projectile owner when present. Natural actors pass through with no player actor, which lets enabled flags deny unsafe automation or mob-driven changes without loading chunks.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.

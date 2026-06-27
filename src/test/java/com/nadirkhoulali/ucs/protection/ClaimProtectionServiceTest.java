@@ -87,7 +87,9 @@ class ClaimProtectionServiceTest {
                 List.of("modded:door"),
                 List.of("modded:button"),
                 List.of("modded:lever"),
-                List.of("modded:redstone_bus")
+                List.of("modded:redstone_bus"),
+                UcsConfigDefaults.DEFAULT_ENTITY_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_VEHICLE_TARGET_IDS
         );
 
         assertEquals(UcsBuiltInProtectionFlags.CONTAINER_OPEN, service.interactionFlagForBlockId(config, "modded:machine").orElseThrow());
@@ -96,6 +98,29 @@ class ClaimProtectionServiceTest {
         assertEquals(UcsBuiltInProtectionFlags.LEVER_USE, service.interactionFlagForBlockId(config, "modded:lever").orElseThrow());
         assertEquals(UcsBuiltInProtectionFlags.REDSTONE_USE, service.interactionFlagForBlockId(config, "modded:redstone_bus").orElseThrow());
         assertTrue(service.interactionFlagForBlockId(config, "minecraft:dirt").isEmpty());
+    }
+
+    @Test
+    void classifiesEntityTargetsByRegistryId() {
+        UcsConfigSnapshot config = config(
+                List.of(),
+                List.of(),
+                List.of("minecraft:beacon"),
+                UcsConfigDefaults.DEFAULT_CONTAINER_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_DOOR_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_BUTTON_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_LEVER_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS,
+                List.of("modded:animal"),
+                List.of("modded:cart")
+        );
+
+        assertEquals(UcsBuiltInProtectionFlags.ENTITY_INTERACT, service.entityInteractionFlagForEntityTypeId(config, "modded:animal").orElseThrow());
+        assertEquals(UcsBuiltInProtectionFlags.VEHICLE_USE, service.entityInteractionFlagForEntityTypeId(config, "modded:cart").orElseThrow());
+        assertTrue(service.isProtectedEntityTypeId(config, "modded:animal"));
+        assertTrue(service.isProtectedEntityTypeId(config, "modded:cart"));
+        assertTrue(service.isVehicleEntityTypeId(config, "modded:cart"));
+        assertTrue(service.entityInteractionFlagForEntityTypeId(config, "minecraft:zombie").isEmpty());
     }
 
     private static Claim claimWithFlags(UUID owner, Set<FlagId> flags) {
@@ -120,7 +145,9 @@ class ClaimProtectionServiceTest {
                 UcsConfigDefaults.DEFAULT_DOOR_TARGET_IDS,
                 UcsConfigDefaults.DEFAULT_BUTTON_TARGET_IDS,
                 UcsConfigDefaults.DEFAULT_LEVER_TARGET_IDS,
-                UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS
+                UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_ENTITY_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_VEHICLE_TARGET_IDS
         );
     }
 
@@ -132,7 +159,9 @@ class ClaimProtectionServiceTest {
             List<String> doorTargets,
             List<String> buttonTargets,
             List<String> leverTargets,
-            List<String> redstoneTargets
+            List<String> redstoneTargets,
+            List<String> entityTargets,
+            List<String> vehicleTargets
     ) {
         return new UcsConfigSnapshot(
                 UcsConfigDefaults.CURRENT_SCHEMA_VERSION,
@@ -156,7 +185,9 @@ class ClaimProtectionServiceTest {
                         doorTargets,
                         buttonTargets,
                         leverTargets,
-                        redstoneTargets
+                        redstoneTargets,
+                        entityTargets,
+                        vehicleTargets
                 ),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),

@@ -133,6 +133,8 @@
   "ucs.configuration.buttonTargetIds": "Button Target IDs",
   "ucs.configuration.leverTargetIds": "Lever Target IDs",
   "ucs.configuration.redstoneTargetIds": "Redstone Target IDs",
+  "ucs.configuration.entityTargetIds": "Entity Target IDs",
+  "ucs.configuration.vehicleTargetIds": "Vehicle Target IDs",
   "ucs.configuration.economy": "Economy",
   "ucs.configuration.enableWhenProviderExists": "Enable When Provider Exists",
   "ucs.configuration.starterClaimPrice": "Starter Claim Price",

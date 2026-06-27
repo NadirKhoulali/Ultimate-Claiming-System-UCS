@@ -46,6 +46,10 @@ A configured block id whose destruction uses a stricter protection flag than ord
 
 A configured block id or block tag that maps a right-clicked block to a protection flag, such as container open, door use, button use, lever use, or redstone use.
 
+## Entity Target
+
+A configured entity type id or entity type tag that maps entity interaction, damage, vehicle use, item pickup, or item drop to a protection decision.
+
 ## Lease
 
 A tenant contract that grants a tenant role on a claim for a time window. Lease is separate from tax: rent is paid by a tenant, while tax/upkeep is paid by an owner to the server sink.

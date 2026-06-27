@@ -45,6 +45,8 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> BUTTON_TARGET_IDS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> LEVER_TARGET_IDS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> REDSTONE_TARGET_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> ENTITY_TARGET_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> VEHICLE_TARGET_IDS;
 
     public static final ModConfigSpec.BooleanValue ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS;
     public static final ModConfigSpec.DoubleValue STARTER_CLAIM_PRICE;
@@ -192,6 +194,12 @@ public final class UcsCommonConfig {
         REDSTONE_TARGET_IDS = BUILDER
                 .comment("Block ids or #tag ids treated as redstone boundary sources for ucs:redstone_use.")
                 .defineListAllowEmpty("redstoneTargetIds", UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
+        ENTITY_TARGET_IDS = BUILDER
+                .comment("Entity type ids or #tag ids protected by ucs:entity_interact and ucs:entity_damage.")
+                .defineListAllowEmpty("entityTargetIds", UcsConfigDefaults.DEFAULT_ENTITY_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
+        VEHICLE_TARGET_IDS = BUILDER
+                .comment("Entity type ids or #tag ids protected by ucs:vehicle_use and entity damage checks.")
+                .defineListAllowEmpty("vehicleTargetIds", UcsConfigDefaults.DEFAULT_VEHICLE_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
         BUILDER.pop();
 
         BUILDER.push("economy");
@@ -326,7 +334,9 @@ public final class UcsCommonConfig {
                         List.copyOf(DOOR_TARGET_IDS.get()),
                         List.copyOf(BUTTON_TARGET_IDS.get()),
                         List.copyOf(LEVER_TARGET_IDS.get()),
-                        List.copyOf(REDSTONE_TARGET_IDS.get())
+                        List.copyOf(REDSTONE_TARGET_IDS.get()),
+                        List.copyOf(ENTITY_TARGET_IDS.get()),
+                        List.copyOf(VEHICLE_TARGET_IDS.get())
                 ),
                 new UcsConfigSnapshot.EconomyPolicy(
                         ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS.get(),
