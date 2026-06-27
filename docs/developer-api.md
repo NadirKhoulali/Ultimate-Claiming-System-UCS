@@ -169,6 +169,8 @@ Economy admin controls are handled by `ClaimEconomyAdminService`. It provides pr
 
 The file-backed terrain cache lives in `com.nadirkhoulali.ucs.map`. `FileMapTileCache` maps `MapTileKey` values to versioned `.ucstile` files, validates the binary envelope on read, deletes corrupt or stale files at the expected path, and prunes by configured age and total size. Generation and streaming code should treat `MISS`, `STALE_VERSION`, and `CORRUPT` as safe regeneration states.
 
+`TerrainTileGenerator` renders 128x128 terrain payloads from immutable `TerrainChunkSnapshot` objects and writes them to `FileMapTileCache`. Live Minecraft access is isolated behind `TerrainChunkSampler`; `LoadedServerTerrainChunkSampler` uses `ServerChunkCache#getChunkNow(...)`, so sampling loaded chunks does not request, load, or generate terrain. Missing chunks render as the unknown color and can be regenerated later when chunks are loaded.
+
 ## Events
 
 Claim events live under `com.nadirkhoulali.ucs.api.event`:

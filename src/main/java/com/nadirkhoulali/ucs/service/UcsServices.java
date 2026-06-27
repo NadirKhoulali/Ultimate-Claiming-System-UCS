@@ -18,6 +18,7 @@ import com.nadirkhoulali.ucs.claim.ClaimSaleService;
 import com.nadirkhoulali.ucs.claim.ClaimTaxService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.economy.DefaultClaimEconomyProviderRegistry;
+import com.nadirkhoulali.ucs.map.TerrainTileGenerator;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import com.nadirkhoulali.ucs.protection.DefaultProtectionFlagRegistry;
@@ -47,6 +48,7 @@ public final class UcsServices {
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
+    private final TerrainTileGenerator terrainTileGenerator = new TerrainTileGenerator();
     private final ProtectionFlagRegistry protectionFlags = DefaultProtectionFlagRegistry.withBuiltIns();
     private final ClaimEconomyProviderRegistry economyProviders = DefaultClaimEconomyProviderRegistry.withBuiltIns();
     private ClaimRepository claimRepository;
@@ -136,6 +138,10 @@ public final class UcsServices {
 
     public ClaimEconomyProviderRegistry economyProviders() {
         return economyProviders;
+    }
+
+    public TerrainTileGenerator terrainTiles() {
+        return terrainTileGenerator;
     }
 
     public synchronized void clearServerState() {

@@ -147,6 +147,8 @@ Map terrain tiles are configured separately from claim SavedData. The default ca
 
 The file cache stores `.ucstile` files outside SavedData using the versioned path documented in [ADR 0002](adr/0002-file-based-map-tile-cache.md). `maxTileAgeDays` and `maxSizeMiB` control pruning. Missing, stale-version, or corrupt tiles are safe to regenerate.
 
+Terrain tile generation is bounded by the same map-cache job/request limits and samples only chunks that are already loaded by the server. Unknown areas are encoded into the tile payload instead of forcing worldgen.
+
 ## Audit And Purge
 
 Audit logging is enabled by default. Archive retention defaults to `archive.retentionDays = 365`; old archive records are pruned when new archives are created. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.

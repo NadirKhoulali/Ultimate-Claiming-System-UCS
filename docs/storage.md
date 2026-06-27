@@ -53,6 +53,8 @@ The index is rebuilt from persisted claims on load. Duplicate claimed chunks are
 
 Terrain map tiles are stored outside SavedData by `FileMapTileCache`. The cache root contains versioned `.ucstile` files keyed by dimension, zoom, tileX, and tileZ. Each file carries its own key metadata so mismatched or corrupt tiles fail gracefully and can be regenerated. Cache pruning deletes old files first, then oldest remaining files until the configured size cap is met.
 
+Terrain generation writes cache payloads only after server-thread sampling has copied loaded chunk data into immutable snapshots. UCS uses `getChunkNow` for the built-in sampler, so map browsing cannot create new chunks. Unloaded or unavailable chunks render as the unknown color in the cached payload.
+
 ## Versioning
 
 `UcsClaimsSavedData` stores a `storageVersion`. Current version is `1`. Newer data is loaded best-effort with a warning; future migrations should be added before changing the version.
