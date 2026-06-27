@@ -2,7 +2,7 @@
 
 Ultimate Claiming System / UCS is an open-source Minecraft claiming mod targeting NeoForge 1.21.1.
 
-The current implementation includes the NeoForge mod scaffold, versioned config, SavedData claim storage, public API/event baseline, permission nodes, and the first `/claim` and `/claim <radius>` workflow. Additional claiming features are implemented through the GitHub project board in dependency order.
+The current implementation includes the NeoForge mod scaffold, versioned config, SavedData claim storage, public API/event baseline, permission nodes, `/claim`, `/claim <radius>`, and connected chunk edit commands. Additional claiming features are implemented through the GitHub project board in dependency order.
 
 ## Development
 

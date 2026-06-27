@@ -68,7 +68,7 @@ public final class ClaimCreationService {
             return ClaimCreationResult.success(saved, auditEntry, selectedChunkCount);
         } catch (ClaimRepositoryException exception) {
             return ClaimCreationResult.failure(
-                    ClaimCreationFailure.simple(ClaimCreationFailureReason.SAVE_FAILED, exception.getMessage()),
+                    ClaimCreationFailure.simple(ClaimCreationFailureReason.SAVE_FAILED, exceptionDetail(exception)),
                     selectedChunkCount
             );
         }
@@ -156,5 +156,9 @@ public final class ClaimCreationService {
         return config.flags().defaultProtectionFlagIds().stream()
                 .map(FlagId::new)
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static String exceptionDetail(RuntimeException exception) {
+        return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
     }
 }

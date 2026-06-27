@@ -4,6 +4,7 @@ import com.nadirkhoulali.ucs.api.UcsClaimService;
 import com.nadirkhoulali.ucs.api.UcsApiProvider;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsClaimService;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
+import com.nadirkhoulali.ucs.claim.ClaimChunkEditService;
 import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public final class UcsServices {
     private final UcsPermissionService permissionService = new UcsPermissionService();
     private final ClaimCreationService claimCreationService = new ClaimCreationService();
+    private final ClaimChunkEditService claimChunkEditService = new ClaimChunkEditService();
     private ClaimRepository claimRepository;
     private UcsClaimService claimService;
 
@@ -44,6 +46,10 @@ public final class UcsServices {
 
     public ClaimCreationService claimCreation() {
         return claimCreationService;
+    }
+
+    public ClaimChunkEditService claimChunkEdit() {
+        return claimChunkEditService;
     }
 
     public synchronized void clearServerState() {
