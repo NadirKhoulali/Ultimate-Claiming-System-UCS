@@ -81,6 +81,7 @@ public final class TerrainTileGenerator {
             }
         }
 
+        TerrainColorEnhancer.applyLocalColorBlending(colors, heights, TILE_SIZE);
         TerrainColorEnhancer.applyReliefShading(colors, heights, TILE_SIZE, key.zoom());
         Path path = cache.write(key, new TerrainTilePayload(key, TILE_SIZE, colors).encode(), now);
         TerrainTileGenerationStatus status = deferredChunks == 0

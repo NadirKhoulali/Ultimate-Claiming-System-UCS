@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FileMapTileCache {
-    public static final int CURRENT_FORMAT_VERSION = 3;
+    public static final int CURRENT_FORMAT_VERSION = 4;
     public static final String TILE_EXTENSION = ".ucstile";
     private static final int MAGIC = 0x5543534D;
     private static final int TILE_SHARD_SIZE = 256;

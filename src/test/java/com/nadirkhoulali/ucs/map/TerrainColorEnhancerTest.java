@@ -2,6 +2,7 @@ package com.nadirkhoulali.ucs.map;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -24,12 +25,22 @@ class TerrainColorEnhancerTest {
     }
 
     @Test
-    void reliefShadingChangesFlatMapColorsWhenHeightChanges() {
+    void grassColorKeepsBiomeVariationAndAvoidsFlatMapGreen() {
+        int plains = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0x91BD59);
+        int savanna = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0xBFB755);
+
+        assertNotEquals(plains, savanna);
+        assertNotEquals(0xFF7FB238, plains);
+        assertTrue(luminance(savanna) > luminance(plains));
+    }
+
+    @Test
+    void reliefShadingBrightensSlopesFacingNorthwestLight() {
         int[] colors = new int[9];
         int[] heights = new int[]{
-                72, 72, 71,
-                72, 76, 70,
-                71, 70, 69
+                70, 72, 74,
+                72, 74, 76,
+                74, 76, 78
         };
         for (int i = 0; i < colors.length; i++) {
             colors[i] = 0xFF777777;
@@ -37,7 +48,43 @@ class TerrainColorEnhancerTest {
 
         TerrainColorEnhancer.applyReliefShading(colors, heights, 3, 0);
 
-        assertNotEquals(0xFF777777, colors[4]);
+        assertTrue(luminance(colors[4]) > luminance(0xFF777777));
+    }
+
+    @Test
+    void reliefShadingDarkensSlopesFacingAwayFromNorthwestLight() {
+        int[] colors = new int[9];
+        int[] heights = new int[]{
+                78, 76, 74,
+                76, 74, 72,
+                74, 72, 70
+        };
+        for (int i = 0; i < colors.length; i++) {
+            colors[i] = 0xFF777777;
+        }
+
+        TerrainColorEnhancer.applyReliefShading(colors, heights, 3, 0);
+
+        assertTrue(luminance(colors[4]) < luminance(0xFF777777));
+    }
+
+    @Test
+    void localColorBlendingSmoothsSimilarTerrainButKeepsSharpEdges() {
+        int[] colors = new int[]{
+                0xFF607A38, 0xFF637C3A, 0xFF233388,
+                0xFF617B39, 0xFF66803D, 0xFF233388,
+                0xFF5F7938, 0xFF637D3B, 0xFF233388
+        };
+        int[] heights = new int[]{
+                64, 64, 64,
+                64, 64, 64,
+                64, 64, 64
+        };
+
+        TerrainColorEnhancer.applyLocalColorBlending(colors, heights, 3);
+
+        assertNotEquals(0xFF66803D, colors[4]);
+        assertEquals(0xFF233388, colors[5]);
     }
 
     private static int luminance(int color) {
