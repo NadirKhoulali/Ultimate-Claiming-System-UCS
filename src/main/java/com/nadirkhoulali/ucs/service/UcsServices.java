@@ -4,6 +4,7 @@ import com.nadirkhoulali.ucs.api.UcsClaimService;
 import com.nadirkhoulali.ucs.api.UcsApiProvider;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsClaimService;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
+import com.nadirkhoulali.ucs.api.protection.ProtectionFlagRegistry;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditService;
 import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
@@ -12,6 +13,7 @@ import com.nadirkhoulali.ucs.claim.ClaimRoleService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
+import com.nadirkhoulali.ucs.protection.DefaultProtectionFlagRegistry;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.SavedDataClaimRepository;
 import com.nadirkhoulali.ucs.storage.UcsClaimsSavedData;
@@ -27,6 +29,7 @@ public final class UcsServices {
     private final ClaimMetadataService claimMetadataService = new ClaimMetadataService();
     private final ClaimRoleService claimRoleService = new ClaimRoleService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
+    private final ProtectionFlagRegistry protectionFlags = DefaultProtectionFlagRegistry.withBuiltIns();
     private ClaimRepository claimRepository;
     private UcsClaimService claimService;
 
@@ -36,7 +39,7 @@ public final class UcsServices {
                 .computeIfAbsent(UcsClaimsSavedData.factory(), UcsClaimsSavedData.DATA_NAME);
         this.claimRepository = new SavedDataClaimRepository(savedData);
         this.claimService = new DefaultUcsClaimService(claimRepository);
-        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimService));
+        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimService, protectionFlags));
         return claimRepository;
     }
 
@@ -74,6 +77,10 @@ public final class UcsServices {
 
     public ClaimTeleportService claimTeleport() {
         return claimTeleportService;
+    }
+
+    public ProtectionFlagRegistry protectionFlags() {
+        return protectionFlags;
     }
 
     public synchronized void clearServerState() {

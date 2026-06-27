@@ -1,5 +1,7 @@
 package com.nadirkhoulali.ucs.api;
 
+import com.nadirkhoulali.ucs.api.protection.ProtectionFlagRegistry;
+
 import java.util.Optional;
 
 public final class UcsApi {
@@ -14,5 +16,9 @@ public final class UcsApi {
      */
     public static Optional<UcsClaimService> claimService() {
         return UcsApiProvider.access().map(UcsApiAccess::claimService);
+    }
+
+    public static Optional<ProtectionFlagRegistry> protectionFlags() {
+        return UcsApiProvider.access().map(UcsApiAccess::protectionFlags);
     }
 }

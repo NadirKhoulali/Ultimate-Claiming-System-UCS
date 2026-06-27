@@ -36,7 +36,7 @@ A server-side movement action that sends a kicked or banned player to a safe sam
 
 ## Flag
 
-A typed protection rule key, such as `ucs:block_break` or `ucs:container_open`. Addons should use namespaced flag ids.
+A typed protection rule key, such as `ucs:block_break` or `ucs:container_open`. A flag definition includes display name, category, default decision, applicable roles, and actor requirements. Addons should use namespaced flag ids.
 
 ## Lease
 

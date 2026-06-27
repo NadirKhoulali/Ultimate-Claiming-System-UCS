@@ -16,6 +16,8 @@ UcsApi.claimService().ifPresent(service -> {
 
 The service is only present while a server world is active.
 
+Use `UcsApi.protectionFlags()` to access the live protection flag registry while a server world is active. Addons may register custom `ProtectionFlagDefinition` instances during their server-side initialization before their own protection checks depend on them.
+
 ## Threading
 
 All v1 API methods are server-thread only unless a future method explicitly documents async safety. Do not access Minecraft world objects from background threads through UCS.
@@ -76,6 +78,17 @@ Built-in player commands can trust, untrust, assign configured roles, and accept
 The built-in banned role is the first hard-denial role. `/claim ban` assigns it and removes conflicting non-owner role grants; `/claim unban` clears it. `/claim kick` and automatic banned-entry prevention use `ClaimExpulsionService` to search for a safe same-dimension destination outside the claim.
 
 Expulsion decisions post `UcsProtectionDecisionEvent` with `ucs:entry` or `ucs:expel`, allowing addons to observe or override the movement decision before UCS teleports the player.
+
+## Protection Flags
+
+Typed protection flag API lives under `com.nadirkhoulali.ucs.api.protection`.
+
+- `ProtectionFlagDefinition` records id, display name, category, default decision, allowed roles, and whether a player actor is required.
+- `ProtectionFlagRegistry` exposes built-in flags and accepts addon registrations. Duplicate ids throw `DuplicateProtectionFlagException`.
+- `UcsBuiltInProtectionFlags` provides stable constants and initial placeholder definitions for block, interaction, container, entity, item, combat, environment, redstone, mob, and movement categories.
+- `ProtectionFlagEvaluator` returns `ProtectionDecision` values of `ALLOW`, `DENY`, or `ABSTAIN` with reason metadata such as `role_allowed`, `role_not_allowed`, `flag_disabled_for_claim`, and `unknown_flag`.
+
+Claim `flagOverrides` are the persisted per-claim enabled flag set. Config `flags.defaultProtectionFlagIds` decides which flags new claims start with; saved claim flags remain readable even if a later config changes the defaults.
 
 ## Archive Admin Commands
 

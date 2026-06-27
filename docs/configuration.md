@@ -63,6 +63,8 @@ UCS searches for a safe same-dimension location outside the claim before telepor
 
 Default flag ids are namespaced with `ucs:`. Addons should also use namespaced ids.
 
+`flags.defaultProtectionFlagIds` seeds new claims with enabled per-claim flags. It is not the full built-in registry; UCS also registers placeholders for later block, interaction, container, entity, item, combat, environment, redstone, mob, and movement protections.
+
 ## Economy
 
 Economy defaults are enabled when a compatible provider exists:
