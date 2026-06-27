@@ -165,6 +165,10 @@ Economy admin controls are handled by `ClaimEconomyAdminService`. It provides pr
 
 `/ucs economy preview [limit]`, `/ucs economy audit [limit]`, `/ucs economy audit claim <claimId> [limit]`, `/ucs economy audit owner <ownerKey> [limit]`, `/ucs economy refund <player> <amount> <reason>`, `/ucs economy retry tax <claimId>`, `/ucs economy cancel sale <claimId> <reason>`, and `/ucs economy cancel lease <leaseId> <reason>` require `ucs.economy.admin`.
 
+## Map Tile Cache
+
+The file-backed terrain cache lives in `com.nadirkhoulali.ucs.map`. `FileMapTileCache` maps `MapTileKey` values to versioned `.ucstile` files, validates the binary envelope on read, deletes corrupt or stale files at the expected path, and prunes by configured age and total size. Generation and streaming code should treat `MISS`, `STALE_VERSION`, and `CORRUPT` as safe regeneration states.
+
 ## Events
 
 Claim events live under `com.nadirkhoulali.ucs.api.event`:

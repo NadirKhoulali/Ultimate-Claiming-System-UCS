@@ -145,6 +145,8 @@ Admins with `ucs.economy.admin` can run `/ucs debt list [limit]` to inspect debt
 
 Map terrain tiles are configured separately from claim SavedData. The default cache size is `1024 MiB`, with request/job limits to protect large servers.
 
+The file cache stores `.ucstile` files outside SavedData using the versioned path documented in [ADR 0002](adr/0002-file-based-map-tile-cache.md). `maxTileAgeDays` and `maxSizeMiB` control pruning. Missing, stale-version, or corrupt tiles are safe to regenerate.
+
 ## Audit And Purge
 
 Audit logging is enabled by default. Archive retention defaults to `archive.retentionDays = 365`; old archive records are pruned when new archives are created. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.
