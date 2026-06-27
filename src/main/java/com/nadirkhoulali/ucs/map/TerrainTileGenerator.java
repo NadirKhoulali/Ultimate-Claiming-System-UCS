@@ -33,6 +33,7 @@ public final class TerrainTileGenerator {
         int originBlockZ = key.tileZ() * TILE_SIZE * scale;
         Map<ChunkCoord, Optional<TerrainChunkSnapshot>> snapshots = new HashMap<>();
         int[] colors = new int[TILE_SIZE * TILE_SIZE];
+        int[] heights = new int[TILE_SIZE * TILE_SIZE];
         int sampledChunks = 0;
         int unavailableChunks = 0;
         int deferredChunks = 0;
@@ -55,6 +56,7 @@ public final class TerrainTileGenerator {
                         snapshots.put(coord, Optional.empty());
                         deferredChunks++;
                         colors[z * TILE_SIZE + x] = UNKNOWN_COLOR;
+                        heights[z * TILE_SIZE + x] = TerrainChunkSnapshot.UNKNOWN_HEIGHT;
                         unknownPixels++;
                         continue;
                     }
@@ -67,15 +69,19 @@ public final class TerrainTileGenerator {
                 }
 
                 if (snapshot.isPresent()) {
-                    colors[z * TILE_SIZE + x] = snapshot.orElseThrow().colorAt(localX, localZ);
+                    TerrainChunkSnapshot chunkSnapshot = snapshot.orElseThrow();
+                    colors[z * TILE_SIZE + x] = chunkSnapshot.colorAt(localX, localZ);
+                    heights[z * TILE_SIZE + x] = chunkSnapshot.heightAt(localX, localZ);
                     knownPixels++;
                 } else {
                     colors[z * TILE_SIZE + x] = UNKNOWN_COLOR;
+                    heights[z * TILE_SIZE + x] = TerrainChunkSnapshot.UNKNOWN_HEIGHT;
                     unknownPixels++;
                 }
             }
         }
 
+        TerrainColorEnhancer.applyReliefShading(colors, heights, TILE_SIZE, key.zoom());
         Path path = cache.write(key, new TerrainTilePayload(key, TILE_SIZE, colors).encode(), now);
         TerrainTileGenerationStatus status = deferredChunks == 0
                 ? TerrainTileGenerationStatus.COMPLETE
