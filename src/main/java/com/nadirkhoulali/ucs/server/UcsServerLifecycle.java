@@ -1,6 +1,7 @@
 package com.nadirkhoulali.ucs.server;
 
 import com.nadirkhoulali.ucs.UcsMod;
+import com.nadirkhoulali.ucs.command.ClaimCommands;
 import com.nadirkhoulali.ucs.command.UcsCommands;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
@@ -23,6 +24,7 @@ public final class UcsServerLifecycle {
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         UcsCommands.register(event.getDispatcher(), services);
+        ClaimCommands.register(event.getDispatcher(), services);
     }
 
     @SubscribeEvent

@@ -1,7 +1,10 @@
 package com.nadirkhoulali.ucs.service;
 
+import com.nadirkhoulali.ucs.api.UcsClaimService;
 import com.nadirkhoulali.ucs.api.UcsApiProvider;
+import com.nadirkhoulali.ucs.api.internal.DefaultUcsClaimService;
 import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
+import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
@@ -13,14 +16,17 @@ import java.util.Optional;
 
 public final class UcsServices {
     private final UcsPermissionService permissionService = new UcsPermissionService();
+    private final ClaimCreationService claimCreationService = new ClaimCreationService();
     private ClaimRepository claimRepository;
+    private UcsClaimService claimService;
 
     public synchronized ClaimRepository initializeClaimRepository(MinecraftServer server) {
         UcsClaimsSavedData savedData = server.overworld()
                 .getDataStorage()
                 .computeIfAbsent(UcsClaimsSavedData.factory(), UcsClaimsSavedData.DATA_NAME);
         this.claimRepository = new SavedDataClaimRepository(savedData);
-        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimRepository));
+        this.claimService = new DefaultUcsClaimService(claimRepository);
+        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimService));
         return claimRepository;
     }
 
@@ -28,12 +34,21 @@ public final class UcsServices {
         return Optional.ofNullable(claimRepository);
     }
 
+    public synchronized Optional<UcsClaimService> claimService() {
+        return Optional.ofNullable(claimService);
+    }
+
     public UcsPermissionService permissions() {
         return permissionService;
     }
 
+    public ClaimCreationService claimCreation() {
+        return claimCreationService;
+    }
+
     public synchronized void clearServerState() {
         this.claimRepository = null;
+        this.claimService = null;
         UcsApiProvider.clearActiveAccess();
     }
 
