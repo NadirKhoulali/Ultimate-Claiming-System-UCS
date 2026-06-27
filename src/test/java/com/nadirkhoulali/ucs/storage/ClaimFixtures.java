@@ -14,15 +14,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-final class ClaimFixtures {
+public final class ClaimFixtures {
     private ClaimFixtures() {
     }
 
-    static Claim claimAt(int chunkX, int chunkZ) {
+    public static Claim claimAt(int chunkX, int chunkZ) {
         return claimAt(ClaimId.random(), chunkX, chunkZ);
     }
 
-    static Claim claimAt(ClaimId claimId, int chunkX, int chunkZ) {
+    public static Claim claimAt(ClaimId claimId, int chunkX, int chunkZ) {
         UUID member = UUID.randomUUID();
         return new Claim(
                 claimId,

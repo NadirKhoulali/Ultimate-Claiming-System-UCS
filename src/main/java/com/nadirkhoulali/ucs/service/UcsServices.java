@@ -1,5 +1,7 @@
 package com.nadirkhoulali.ucs.service;
 
+import com.nadirkhoulali.ucs.api.UcsApiProvider;
+import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.SavedDataClaimRepository;
 import com.nadirkhoulali.ucs.storage.UcsClaimsSavedData;
@@ -15,6 +17,7 @@ public final class UcsServices {
                 .getDataStorage()
                 .computeIfAbsent(UcsClaimsSavedData.factory(), UcsClaimsSavedData.DATA_NAME);
         this.claimRepository = new SavedDataClaimRepository(savedData);
+        UcsApiProvider.setActiveAccess(new DefaultUcsApiAccess(claimRepository));
         return claimRepository;
     }
 
@@ -24,6 +27,7 @@ public final class UcsServices {
 
     public synchronized void clearServerState() {
         this.claimRepository = null;
+        UcsApiProvider.clearActiveAccess();
     }
 
     public synchronized String summary() {
