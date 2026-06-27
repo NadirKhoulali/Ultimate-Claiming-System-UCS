@@ -36,7 +36,13 @@ class TeamOwnershipApiTest {
                 claim.id(),
                 claim.owner(),
                 updatedChunks,
-                new ClaimMetadata("Builders Base", claim.metadata().spawnChunk(), claim.metadata().createdAt(), Instant.EPOCH.plusSeconds(1)),
+                new ClaimMetadata(
+                        "Builders Base",
+                        claim.metadata().description(),
+                        claim.metadata().spawn(),
+                        claim.metadata().createdAt(),
+                        Instant.EPOCH.plusSeconds(1)
+                ),
                 claim.roleAssignments(),
                 claim.flagOverrides()
         );

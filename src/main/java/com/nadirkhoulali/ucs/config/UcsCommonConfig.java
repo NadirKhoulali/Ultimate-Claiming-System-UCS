@@ -20,6 +20,13 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.IntValue MAX_RADIUS_CLAIM;
     public static final ModConfigSpec.BooleanValue REQUIRE_CONNECTED_CLAIMS;
 
+    public static final ModConfigSpec.IntValue CLAIM_NAME_MAX_LENGTH;
+    public static final ModConfigSpec.IntValue CLAIM_DESCRIPTION_MAX_LENGTH;
+
+    public static final ModConfigSpec.IntValue CLAIM_TELEPORT_DELAY_SECONDS;
+    public static final ModConfigSpec.BooleanValue CLAIM_TELEPORT_CANCEL_ON_MOVE;
+    public static final ModConfigSpec.BooleanValue CLAIM_TELEPORT_REQUIRE_SAFE_LANDING;
+
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_ROLE_IDS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_PROTECTION_FLAG_IDS;
 
@@ -86,6 +93,27 @@ public final class UcsCommonConfig {
         REQUIRE_CONNECTED_CLAIMS = BUILDER
                 .comment("Whether claims must remain connected in v1.")
                 .define("requireConnectedClaims", true);
+        BUILDER.pop();
+
+        BUILDER.push("claimMetadata");
+        CLAIM_NAME_MAX_LENGTH = BUILDER
+                .comment("Maximum characters allowed in a player-edited claim name.")
+                .defineInRange("maxNameLength", 48, 1, 256);
+        CLAIM_DESCRIPTION_MAX_LENGTH = BUILDER
+                .comment("Maximum characters allowed in a player-edited claim description.")
+                .defineInRange("maxDescriptionLength", 240, 0, 4096);
+        BUILDER.pop();
+
+        BUILDER.push("claimTeleport");
+        CLAIM_TELEPORT_DELAY_SECONDS = BUILDER
+                .comment("Delay before /claim home teleports a player. Set to 0 for immediate teleport.")
+                .defineInRange("delaySeconds", 3, 0, 3600);
+        CLAIM_TELEPORT_CANCEL_ON_MOVE = BUILDER
+                .comment("Whether moving to a different block cancels a pending /claim home teleport.")
+                .define("cancelOnMove", true);
+        CLAIM_TELEPORT_REQUIRE_SAFE_LANDING = BUILDER
+                .comment("Whether /claim home requires air at feet/head and a solid block below the destination.")
+                .define("requireSafeLanding", true);
         BUILDER.pop();
 
         BUILDER.push("roles");
@@ -196,6 +224,15 @@ public final class UcsCommonConfig {
                         MAX_CHUNKS_PER_CLAIM.get(),
                         MAX_RADIUS_CLAIM.get(),
                         REQUIRE_CONNECTED_CLAIMS.get()
+                ),
+                new UcsConfigSnapshot.ClaimMetadataPolicy(
+                        CLAIM_NAME_MAX_LENGTH.get(),
+                        CLAIM_DESCRIPTION_MAX_LENGTH.get()
+                ),
+                new UcsConfigSnapshot.ClaimTeleportPolicy(
+                        CLAIM_TELEPORT_DELAY_SECONDS.get(),
+                        CLAIM_TELEPORT_CANCEL_ON_MOVE.get(),
+                        CLAIM_TELEPORT_REQUIRE_SAFE_LANDING.get()
                 ),
                 new UcsConfigSnapshot.RoleDefaults(List.copyOf(DEFAULT_ROLE_IDS.get())),
                 new UcsConfigSnapshot.FlagDefaults(List.copyOf(DEFAULT_PROTECTION_FLAG_IDS.get())),

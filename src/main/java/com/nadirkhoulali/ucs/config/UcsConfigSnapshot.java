@@ -7,6 +7,8 @@ public record UcsConfigSnapshot(
         boolean logStartupSummary,
         DimensionPolicy dimensions,
         ClaimLimitPolicy claimLimits,
+        ClaimMetadataPolicy claimMetadata,
+        ClaimTeleportPolicy claimTeleport,
         RoleDefaults roles,
         FlagDefaults flags,
         EconomyPolicy economy,
@@ -37,6 +39,19 @@ public record UcsConfigSnapshot(
             int maxChunksPerClaim,
             int maxRadiusClaim,
             boolean requireConnectedClaims
+    ) {
+    }
+
+    public record ClaimMetadataPolicy(
+            int maxNameLength,
+            int maxDescriptionLength
+    ) {
+    }
+
+    public record ClaimTeleportPolicy(
+            int delaySeconds,
+            boolean cancelOnMove,
+            boolean requireSafeLanding
     ) {
     }
 

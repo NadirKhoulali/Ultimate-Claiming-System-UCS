@@ -38,6 +38,8 @@ class UcsConfigValidatorsTest {
                 base.logStartupSummary(),
                 base.dimensions(),
                 base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
                 base.roles(),
                 base.flags(),
                 base.economy(),
@@ -62,6 +64,8 @@ class UcsConfigValidatorsTest {
                 base.logStartupSummary(),
                 base.dimensions(),
                 new UcsConfigSnapshot.ClaimLimitPolicy(16, 256, 4, 5, true),
+                base.claimMetadata(),
+                base.claimTeleport(),
                 base.roles(),
                 base.flags(),
                 base.economy(),
@@ -76,6 +80,32 @@ class UcsConfigValidatorsTest {
 
         assertTrue(report.valid());
         assertTrue(report.warnings().stream().anyMatch(warning -> warning.contains("maxRadiusClaim")));
+    }
+
+    @Test
+    void rejectsNegativeTeleportDelay() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                new UcsConfigSnapshot.ClaimTeleportPolicy(-1, true, true),
+                base.roles(),
+                base.flags(),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        UcsConfigValidationReport report = snapshot.validate();
+
+        assertFalse(report.valid());
+        assertTrue(report.errors().stream().anyMatch(error -> error.contains("claimTeleport.delaySeconds")));
     }
 
     @Test
@@ -96,6 +126,8 @@ class UcsConfigValidatorsTest {
                 base.logStartupSummary(),
                 new UcsConfigSnapshot.DimensionPolicy(enabled, disabled, true),
                 base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
                 base.roles(),
                 base.flags(),
                 base.economy(),
@@ -117,6 +149,8 @@ class UcsConfigValidatorsTest {
                         true
                 ),
                 new UcsConfigSnapshot.ClaimLimitPolicy(16, 256, 128, 5, true),
+                new UcsConfigSnapshot.ClaimMetadataPolicy(48, 240),
+                new UcsConfigSnapshot.ClaimTeleportPolicy(3, true, true),
                 new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),

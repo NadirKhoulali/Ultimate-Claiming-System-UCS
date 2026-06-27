@@ -24,6 +24,25 @@ The default limits are conservative starter values:
 
 The radius setting can select more chunks than a claim permits; UCS reports this as a warning because admins may intentionally keep radius commands below hard claim-size limits.
 
+## Claim Metadata
+
+Player-edited names and descriptions are bounded by config:
+
+- `claimMetadata.maxNameLength = 48`
+- `claimMetadata.maxDescriptionLength = 240`
+
+Names must be nonblank after trimming. Descriptions may be blank.
+
+## Claim Teleport
+
+`/claim home` uses server-side teleport policy:
+
+- `claimTeleport.delaySeconds = 3`
+- `claimTeleport.cancelOnMove = true`
+- `claimTeleport.requireSafeLanding = true`
+
+Safe landing requires the destination dimension to exist, the spawn chunk to still belong to an allowed claim, empty collision at the player's feet and head, a collision block below, and world-border containment.
+
 ## Roles And Flags
 
 Default role ids are `owner`, `member`, `tenant`, and `visitor`. Role behavior is implemented in later slices, but the ids are validated now so storage/API code can rely on stable lowercase keys.

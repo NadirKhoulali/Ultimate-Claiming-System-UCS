@@ -8,6 +8,10 @@ A protected land record owned by a player, API-only team, or the server. In v1, 
 
 One full-height Minecraft chunk belonging to a claim. UCS v1 does not support vertical slices or cuboid subregions.
 
+## Claim Spawn
+
+An optional exact position inside a claim used by `/claim home`. A spawn records dimension/chunk plus x/y/z/yaw/pitch and is cleared automatically if chunk edits remove its chunk.
+
 ## Owner Reference
 
 A stable reference to the authority that owns a claim. Owner references can point at a player UUID, an API-only team id, or a server/admin namespace.

@@ -304,7 +304,13 @@ public final class ClaimChunkEditService {
                 claim.id(),
                 claim.owner(),
                 chunks,
-                new ClaimMetadata(displayName, spawnChunk, claim.metadata().createdAt(), updatedAt),
+                new ClaimMetadata(
+                        displayName,
+                        claim.metadata().description(),
+                        claim.metadata().spawn().filter(spawn -> spawnChunk.isPresent()),
+                        claim.metadata().createdAt(),
+                        updatedAt
+                ),
                 claim.roleAssignments(),
                 claim.flagOverrides()
         );
@@ -324,7 +330,7 @@ public final class ClaimChunkEditService {
                     id,
                     original.owner(),
                     ordered.get(index),
-                    new ClaimMetadata(displayName, Optional.empty(), original.metadata().createdAt(), updatedAt),
+                    new ClaimMetadata(displayName, original.metadata().description(), Optional.empty(), original.metadata().createdAt(), updatedAt),
                     original.roleAssignments(),
                     original.flagOverrides()
             ));

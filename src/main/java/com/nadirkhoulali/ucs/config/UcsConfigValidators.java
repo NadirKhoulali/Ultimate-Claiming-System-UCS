@@ -34,6 +34,8 @@ public final class UcsConfigValidators {
         validateMigration(config, report);
         validateDimensions(config.dimensions(), report);
         validateClaimLimits(config.claimLimits(), report);
+        validateClaimMetadata(config.claimMetadata(), report);
+        validateClaimTeleport(config.claimTeleport(), report);
         validateRoleDefaults(config.roles(), report);
         validateFlagDefaults(config.flags(), report);
         validateEconomy(config.economy(), report);
@@ -89,6 +91,21 @@ public final class UcsConfigValidators {
         if (squareRadiusChunks > limits.maxChunksPerClaim()) {
             report.warning("claimLimits.maxRadiusClaim can select more chunks than maxChunksPerClaim");
         }
+    }
+
+    private static void validateClaimMetadata(
+            UcsConfigSnapshot.ClaimMetadataPolicy metadata,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireAtLeast("claimMetadata.maxNameLength", metadata.maxNameLength(), 1, report);
+        requireAtLeast("claimMetadata.maxDescriptionLength", metadata.maxDescriptionLength(), 0, report);
+    }
+
+    private static void validateClaimTeleport(
+            UcsConfigSnapshot.ClaimTeleportPolicy teleport,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireAtLeast("claimTeleport.delaySeconds", teleport.delaySeconds(), 0, report);
     }
 
     private static void validateRoleDefaults(

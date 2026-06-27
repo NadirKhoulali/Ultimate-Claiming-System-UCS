@@ -24,6 +24,13 @@ All v1 API methods are server-thread only unless a future method explicitly docu
 
 `ClaimView`, `ClaimArchiveView`, and `OwnerView` are immutable read models. They do not expose repository internals or mutable collections.
 
+`ClaimView` includes player-facing metadata:
+
+- `displayName`
+- `description`
+- `spawn`, an exact claim spawn position when one is set
+- `spawnChunk`, a compatibility convenience derived from `spawn`
+
 ## Ownership
 
 Claims are owned by an `OwnerRef`:
@@ -47,6 +54,8 @@ Use `OwnerRef.stableKey()` or `ClaimOwnership` helpers for comparisons. Do not a
 - Restoring archives.
 
 Mutation methods emit NeoForge events after repository commit.
+
+Built-in player commands update claim metadata through the same service path, so name, description, and spawn edits emit `UcsClaimEvent.Updated` after repository commit.
 
 ## Events
 

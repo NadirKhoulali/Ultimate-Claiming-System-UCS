@@ -4,6 +4,7 @@ import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
+import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 
@@ -21,7 +22,9 @@ public record ClaimView(
         OwnerView owner,
         Set<ChunkKey> chunks,
         String displayName,
+        String description,
         Optional<ChunkKey> spawnChunk,
+        Optional<ClaimSpawn> spawn,
         Instant createdAt,
         Instant updatedAt,
         Map<RoleId, Set<UUID>> roleAssignments,
@@ -29,7 +32,9 @@ public record ClaimView(
 ) {
     public ClaimView {
         chunks = Set.copyOf(chunks);
+        Objects.requireNonNull(description, "description");
         spawnChunk = Objects.requireNonNull(spawnChunk, "spawnChunk");
+        spawn = Objects.requireNonNull(spawn, "spawn");
         roleAssignments = copyRoleAssignments(roleAssignments);
         flagOverrides = Set.copyOf(flagOverrides);
     }
@@ -40,7 +45,9 @@ public record ClaimView(
                 OwnerView.from(claim.owner()),
                 claim.chunks().stream().map(ClaimChunk::key).collect(Collectors.toUnmodifiableSet()),
                 claim.metadata().displayName(),
+                claim.metadata().description(),
                 claim.metadata().spawnChunk(),
+                claim.metadata().spawn(),
                 claim.metadata().createdAt(),
                 claim.metadata().updatedAt(),
                 claim.roleAssignments(),

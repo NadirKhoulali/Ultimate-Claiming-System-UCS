@@ -19,6 +19,10 @@ UCS v1 stores claim/domain data in Minecraft `SavedData` under the overworld dat
 - Archive.
 - Restore.
 
+## Claim Metadata
+
+Saved claims persist display name, description, and an optional exact spawn position. The spawn stores dimension/chunk plus x/y/z/yaw/pitch; `spawnChunk` is still exposed as a derived compatibility accessor for chunk-level checks.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.

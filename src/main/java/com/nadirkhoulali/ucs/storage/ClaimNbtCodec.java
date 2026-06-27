@@ -7,6 +7,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
+import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.OwnerRef;
 import com.nadirkhoulali.ucs.core.model.OwnerType;
@@ -126,21 +127,45 @@ final class ClaimNbtCodec {
     private static CompoundTag encodeMetadata(ClaimMetadata metadata) {
         CompoundTag tag = new CompoundTag();
         tag.putString("displayName", metadata.displayName());
-        metadata.spawnChunk().ifPresent(spawnChunk -> tag.put("spawnChunk", encodeChunkKey(spawnChunk)));
+        tag.putString("description", metadata.description());
+        metadata.spawn().ifPresent(spawn -> tag.put("spawn", encodeSpawn(spawn)));
         tag.putLong("createdAt", metadata.createdAt().toEpochMilli());
         tag.putLong("updatedAt", metadata.updatedAt().toEpochMilli());
         return tag;
     }
 
     private static ClaimMetadata decodeMetadata(CompoundTag tag) {
-        Optional<ChunkKey> spawnChunk = tag.contains("spawnChunk", Tag.TAG_COMPOUND)
-                ? Optional.of(decodeChunkKey(tag.getCompound("spawnChunk")))
+        Optional<ClaimSpawn> spawn = tag.contains("spawn", Tag.TAG_COMPOUND)
+                ? Optional.of(decodeSpawn(tag.getCompound("spawn")))
                 : Optional.empty();
         return new ClaimMetadata(
                 tag.getString("displayName"),
-                spawnChunk,
+                tag.getString("description"),
+                spawn,
                 Instant.ofEpochMilli(tag.getLong("createdAt")),
                 Instant.ofEpochMilli(tag.getLong("updatedAt"))
+        );
+    }
+
+    private static CompoundTag encodeSpawn(ClaimSpawn spawn) {
+        CompoundTag tag = new CompoundTag();
+        tag.put("chunk", encodeChunkKey(spawn.chunk()));
+        tag.putDouble("x", spawn.x());
+        tag.putDouble("y", spawn.y());
+        tag.putDouble("z", spawn.z());
+        tag.putFloat("yaw", spawn.yaw());
+        tag.putFloat("pitch", spawn.pitch());
+        return tag;
+    }
+
+    private static ClaimSpawn decodeSpawn(CompoundTag tag) {
+        return new ClaimSpawn(
+                decodeChunkKey(tag.getCompound("chunk")),
+                tag.getDouble("x"),
+                tag.getDouble("y"),
+                tag.getDouble("z"),
+                tag.getFloat("yaw"),
+                tag.getFloat("pitch")
         );
     }
 

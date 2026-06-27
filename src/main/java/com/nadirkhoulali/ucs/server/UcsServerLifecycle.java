@@ -12,6 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 
 public final class UcsServerLifecycle {
@@ -64,5 +65,11 @@ public final class UcsServerLifecycle {
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         services.clearServerState();
+    }
+
+    @SubscribeEvent
+    public void onServerTick(ServerTickEvent.Post event) {
+        services.claimRepository()
+                .ifPresent(repository -> services.claimTeleport().tick(event.getServer(), repository, UcsCommonConfig.snapshot()));
     }
 }
