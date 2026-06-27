@@ -24,6 +24,16 @@ All v1 API methods are server-thread only unless a future method explicitly docu
 
 `ClaimView`, `ClaimArchiveView`, and `OwnerView` are immutable read models. They do not expose repository internals or mutable collections.
 
+## Ownership
+
+Claims are owned by an `OwnerRef`:
+
+- `PlayerOwner` is the v1 command and default UI path.
+- `TeamOwner` is API-only in v1. Addons may create, read, and update team-owned claims through `UcsClaimService`, but UCS does not provide built-in team creation or management screens yet.
+- `ServerOwner` represents server/admin claims.
+
+Use `OwnerRef.stableKey()` or `ClaimOwnership` helpers for comparisons. Do not assume every claim owner is a player UUID.
+
 ## Claim Service
 
 `UcsClaimService` supports:

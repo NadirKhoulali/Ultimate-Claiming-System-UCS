@@ -29,4 +29,12 @@ class OwnerRefTest {
     void serverOwnerRejectsBlankNamespace() {
         assertThrows(IllegalArgumentException.class, () -> new ServerOwner(" "));
     }
+
+    @Test
+    void serverOwnerUsesNamespaceStableKey() {
+        ServerOwner owner = new ServerOwner("spawn");
+
+        assertEquals(OwnerType.SERVER, owner.type());
+        assertEquals("server:spawn", owner.stableKey());
+    }
 }

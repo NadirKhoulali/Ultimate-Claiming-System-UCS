@@ -12,6 +12,8 @@ One full-height Minecraft chunk belonging to a claim. UCS v1 does not support ve
 
 A stable reference to the authority that owns a claim. Owner references can point at a player UUID, an API-only team id, or a server/admin namespace.
 
+Team owner references are valid in storage and API in v1, but built-in team UI and team-provider integration are deferred. Player-owned claims are the default command and GUI path.
+
 ## Role
 
 A named claim-level permission group, such as owner, member, tenant, or visitor. Roles are configurable in later implementation slices, and v1 does not use inheritance.

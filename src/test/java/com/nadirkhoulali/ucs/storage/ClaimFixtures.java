@@ -6,6 +6,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.FlagId;
+import com.nadirkhoulali.ucs.core.model.OwnerRef;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.core.model.ServerOwner;
 
@@ -23,10 +24,18 @@ public final class ClaimFixtures {
     }
 
     public static Claim claimAt(ClaimId claimId, int chunkX, int chunkZ) {
+        return claimAt(claimId, chunkX, chunkZ, new ServerOwner("spawn"));
+    }
+
+    public static Claim claimAt(int chunkX, int chunkZ, OwnerRef owner) {
+        return claimAt(ClaimId.random(), chunkX, chunkZ, owner);
+    }
+
+    public static Claim claimAt(ClaimId claimId, int chunkX, int chunkZ, OwnerRef owner) {
         UUID member = UUID.randomUUID();
         return new Claim(
                 claimId,
-                new ServerOwner("spawn"),
+                owner,
                 Set.of(new ClaimChunk(new ChunkKey("minecraft:overworld", chunkX, chunkZ))),
                 ClaimMetadata.create("Spawn", Instant.EPOCH),
                 Map.of(new RoleId("member"), Set.of(member)),

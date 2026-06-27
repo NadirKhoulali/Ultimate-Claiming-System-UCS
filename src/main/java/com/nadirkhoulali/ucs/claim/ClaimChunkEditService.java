@@ -10,6 +10,7 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
+import com.nadirkhoulali.ucs.core.model.ClaimOwnership;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import com.nadirkhoulali.ucs.storage.ClaimRepositoryException;
@@ -347,11 +348,11 @@ public final class ClaimChunkEditService {
     }
 
     private static PlayerOwner owner(ClaimChunkEditRequest request) {
-        return new PlayerOwner(request.playerId(), request.playerName());
+        return ClaimOwnership.player(request.playerId(), request.playerName());
     }
 
     private static boolean sameOwner(Claim claim, PlayerOwner owner) {
-        return claim.owner().stableKey().equals(owner.stableKey());
+        return ClaimOwnership.isOwnedBy(claim, owner);
     }
 
     private static boolean sameDimension(Claim first, Claim second) {

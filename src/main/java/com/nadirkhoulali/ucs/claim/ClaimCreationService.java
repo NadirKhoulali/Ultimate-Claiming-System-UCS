@@ -10,6 +10,7 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
+import com.nadirkhoulali.ucs.core.model.ClaimOwnership;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.core.model.RoleId;
@@ -45,7 +46,7 @@ public final class ClaimCreationService {
             return ClaimCreationResult.failure(validationFailure.orElseThrow(), selectedChunkCount);
         }
 
-        PlayerOwner owner = new PlayerOwner(request.playerId(), request.playerName());
+        PlayerOwner owner = ClaimOwnership.player(request.playerId(), request.playerName());
         Claim claim = new Claim(
                 ClaimId.random(),
                 owner,
@@ -115,9 +116,9 @@ public final class ClaimCreationService {
             ));
         }
 
-        PlayerOwner owner = new PlayerOwner(request.playerId(), request.playerName());
+        PlayerOwner owner = ClaimOwnership.player(request.playerId(), request.playerName());
         long ownedClaimCount = repository.claims().stream()
-                .filter(claim -> claim.owner().stableKey().equals(owner.stableKey()))
+                .filter(claim -> ClaimOwnership.isOwnedBy(claim, owner))
                 .count();
         if (ownedClaimCount >= limits.maxClaimsPerPlayer()) {
             return Optional.of(ClaimCreationFailure.simple(
@@ -127,7 +128,7 @@ public final class ClaimCreationService {
         }
 
         int ownedChunkCount = repository.claims().stream()
-                .filter(claim -> claim.owner().stableKey().equals(owner.stableKey()))
+                .filter(claim -> ClaimOwnership.isOwnedBy(claim, owner))
                 .mapToInt(claim -> claim.chunks().size())
                 .sum();
         if (ownedChunkCount + selectedChunks.size() > limits.maxChunksPerPlayer()) {
