@@ -173,6 +173,8 @@ The file-backed terrain cache lives in `com.nadirkhoulali.ucs.map`. `FileMapTile
 
 Tile streaming uses NeoForge play payloads under `com.nadirkhoulali.ucs.network`: `TerrainTileRequestPayload`, `TerrainTileCancelPayload`, and `TerrainTileResponsePayload`. `TerrainTileStreamService` enforces `mapCache.maxTileRequestsPerPlayer` and `mapCache.maxGlobalTileJobs` per batch, supports cancellation by request id, and returns explicit statuses (`HIT`, `GENERATED`, `PLACEHOLDER`, `RATE_LIMITED`, `CANCELLED`, `ERROR`). Client-bound payloads compress tile bytes only when compression reduces the transfer size.
 
+The initial full-screen terrain map lives under `com.nadirkhoulali.ucs.client`. `UcsTerrainMapViewport` owns the pure viewport-to-tile math, while `UcsTerrainMapScreen` handles client input, request cancellation, cached tile rendering, and player-marker placement. `/ucs map` sends `OpenTerrainMapPayload` so the server can open the client screen after permission checks without exposing raw world data.
+
 ## Events
 
 Claim events live under `com.nadirkhoulali.ucs.api.event`:

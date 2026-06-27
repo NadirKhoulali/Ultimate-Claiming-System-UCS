@@ -25,8 +25,10 @@ class UcsTerrainTileClientCacheTest {
         UcsTerrainTileClientCache.accept(TerrainTileResponsePayload.from(response));
 
         TerrainTileStreamResponse cached = UcsTerrainTileClientCache.response(3, key).orElseThrow();
+        TerrainTileStreamResponse latest = UcsTerrainTileClientCache.latest(key).orElseThrow();
         assertEquals(TerrainTileResponseStatus.HIT, cached.status());
         assertArrayEquals(payload, cached.payload());
+        assertArrayEquals(payload, latest.payload());
         assertEquals(1, UcsTerrainTileClientCache.size());
     }
 }

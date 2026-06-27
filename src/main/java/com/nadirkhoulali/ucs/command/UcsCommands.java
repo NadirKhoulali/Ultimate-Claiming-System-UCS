@@ -18,6 +18,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
 import com.nadirkhoulali.ucs.core.model.LeaseId;
 import com.nadirkhoulali.ucs.core.model.LeaseStatus;
+import com.nadirkhoulali.ucs.network.OpenTerrainMapPayload;
 import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
@@ -30,6 +31,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -48,6 +50,7 @@ public final class UcsCommands {
                 .executes(UcsCommands::showAbout)
                 .then(Commands.literal("about").executes(UcsCommands::showAbout))
                 .then(Commands.literal("help").executes(UcsCommands::showHelp))
+                .then(Commands.literal("map").executes(context -> openMap(context, services)))
                 .then(Commands.literal("version").executes(UcsCommands::showVersion))
                 .then(Commands.literal("bypass").executes(context -> toggleBypass(context, services)))
                 .then(Commands.literal("debug").executes(context -> toggleDebug(context, services)))
@@ -234,10 +237,26 @@ public final class UcsCommands {
         return Command.SINGLE_SUCCESS;
     }
 
+    private static int openMap(CommandContext<CommandSourceStack> context, UcsServices services) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.ucs.player_only"));
+            return 0;
+        }
+        if (!services.permissions().require(source, UcsPermission.MAP_VIEW)) {
+            return 0;
+        }
+        PacketDistributor.sendToPlayer(player, OpenTerrainMapPayload.forPlayer(player, 0));
+        source.sendSuccess(() -> Component.translatable("command.ucs.map.opened"), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static int showHelp(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         source.sendSuccess(() -> Component.translatable("command.ucs.help.header"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.version"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.map"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.permissions"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.archive_list"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.archive_restore"), false);

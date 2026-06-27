@@ -20,6 +20,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.LevelResource;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -42,6 +44,13 @@ public final class UcsNetwork {
         registrar.playToServer(TerrainTileRequestPayload.TYPE, TerrainTileRequestPayload.STREAM_CODEC, (payload, context) -> handleTileRequest(payload, context, services));
         registrar.playToServer(TerrainTileCancelPayload.TYPE, TerrainTileCancelPayload.STREAM_CODEC, (payload, context) -> handleTileCancel(payload, context, services));
         registrar.playToClient(TerrainTileResponsePayload.TYPE, TerrainTileResponsePayload.STREAM_CODEC, (payload, context) -> UcsTerrainTileClientCache.accept(payload));
+        registrar.playToClient(OpenTerrainMapPayload.TYPE, OpenTerrainMapPayload.STREAM_CODEC, (payload, context) -> handleOpenMap(payload));
+    }
+
+    private static void handleOpenMap(OpenTerrainMapPayload payload) {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            com.nadirkhoulali.ucs.client.UcsTerrainMapClient.openFromServer(payload);
+        }
     }
 
     private static void handleTileCancel(TerrainTileCancelPayload payload, IPayloadContext context, UcsServices services) {

@@ -151,6 +151,8 @@ Terrain tile generation is bounded by the same map-cache job/request limits and 
 
 Tile streaming also uses `mapCache.maxTileRequestsPerPlayer` and `mapCache.maxGlobalTileJobs` to cap each client request batch. Requests above the effective limit receive rate-limited tile responses instead of being queued unboundedly. Clients may send cancellation payloads when the player pans or zooms away from an older request.
 
+The first terrain map UI is client-side and can be opened with `/ucs map`, the `ucsmap` client command, or the UCS terrain map keybind. The screen renders cached tile responses, requests visible tiles as the viewport changes, and keeps unknown/error/rate-limited tiles visually distinct from generated terrain.
+
 ## Audit And Purge
 
 Audit logging is enabled by default. Archive retention defaults to `archive.retentionDays = 365`; old archive records are pruned when new archives are created. Inactive purge is disabled by default. If inactive purge is enabled, `archiveBeforeDelete` must remain `true`.
