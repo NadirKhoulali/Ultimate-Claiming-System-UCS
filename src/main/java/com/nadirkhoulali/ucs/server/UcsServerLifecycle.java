@@ -114,6 +114,7 @@ public final class UcsServerLifecycle {
             services.claimExpulsion().tick(event.getServer(), repository, config);
             services.claimService().ifPresent(claimService -> services.claimLeases().tick(event.getServer(), repository, claimService));
             services.claimTaxes().tick(event.getServer(), repository, config, services.economyProviders().activeProvider());
+            services.claimService().ifPresent(claimService -> services.claimNonpayment().tick(event.getServer(), repository, claimService, config));
             services.claimService().ifPresent(claimService -> services.claimMovement().tick(
                     event.getServer(),
                     repository,

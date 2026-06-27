@@ -63,6 +63,13 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.IntValue CLAIM_TAX_MAX_CLAIMS_PER_TICK;
     public static final ModConfigSpec.IntValue CLAIM_TAX_WARNING_HOURS_BEFORE_DUE;
 
+    public static final ModConfigSpec.IntValue NONPAYMENT_GRACE_HOURS;
+    public static final ModConfigSpec.IntValue NONPAYMENT_RETRY_INTERVAL_HOURS;
+    public static final ModConfigSpec.IntValue NONPAYMENT_WARNING_INTERVAL_HOURS;
+    public static final ModConfigSpec.BooleanValue NONPAYMENT_ARCHIVE_AFTER_GRACE;
+    public static final ModConfigSpec.BooleanValue NONPAYMENT_REQUIRE_DEBT_PAID_BEFORE_RESTORE;
+    public static final ModConfigSpec.IntValue NONPAYMENT_MAX_CLAIMS_PER_TICK;
+
     public static final ModConfigSpec.IntValue MAP_CACHE_MAX_SIZE_MIB;
     public static final ModConfigSpec.IntValue MAP_CACHE_MAX_TILE_AGE_DAYS;
     public static final ModConfigSpec.IntValue MAP_MAX_TILE_REQUESTS_PER_PLAYER;
@@ -256,6 +263,27 @@ public final class UcsCommonConfig {
                 .defineInRange("warningHoursBeforeDue", 24, 0, 24 * 365);
         BUILDER.pop();
 
+        BUILDER.push("nonpayment");
+        NONPAYMENT_GRACE_HOURS = BUILDER
+                .comment("Hours after first delinquency before UCS may archive an unpaid claim.")
+                .defineInRange("graceHours", 72, 1, 24 * 365 * 100);
+        NONPAYMENT_RETRY_INTERVAL_HOURS = BUILDER
+                .comment("Hours between retry billing attempts while a claim has unpaid debt.")
+                .defineInRange("retryIntervalHours", 24, 1, 24 * 365);
+        NONPAYMENT_WARNING_INTERVAL_HOURS = BUILDER
+                .comment("Minimum hours between online owner nonpayment warnings.")
+                .defineInRange("warningIntervalHours", 24, 1, 24 * 365);
+        NONPAYMENT_ARCHIVE_AFTER_GRACE = BUILDER
+                .comment("Whether UCS archives claims after the nonpayment grace period.")
+                .define("archiveAfterGrace", true);
+        NONPAYMENT_REQUIRE_DEBT_PAID_BEFORE_RESTORE = BUILDER
+                .comment("Whether archive restore is blocked while the claim has unpaid UCS debt.")
+                .define("requireDebtPaidBeforeRestore", false);
+        NONPAYMENT_MAX_CLAIMS_PER_TICK = BUILDER
+                .comment("Maximum delinquent claim tax states inspected per scheduler tick.")
+                .defineInRange("maxClaimsPerTick", 64, 1, 100_000);
+        BUILDER.pop();
+
         BUILDER.push("mapCache");
         MAP_CACHE_MAX_SIZE_MIB = BUILDER
                 .comment("Maximum file-backed terrain tile cache size in MiB.")
@@ -390,6 +418,14 @@ public final class UcsCommonConfig {
                         CLAIM_TAX_PER_CHUNK_AMOUNT.get(),
                         CLAIM_TAX_MAX_CLAIMS_PER_TICK.get(),
                         CLAIM_TAX_WARNING_HOURS_BEFORE_DUE.get()
+                ),
+                new UcsConfigSnapshot.NonpaymentPolicy(
+                        NONPAYMENT_GRACE_HOURS.get(),
+                        NONPAYMENT_RETRY_INTERVAL_HOURS.get(),
+                        NONPAYMENT_WARNING_INTERVAL_HOURS.get(),
+                        NONPAYMENT_ARCHIVE_AFTER_GRACE.get(),
+                        NONPAYMENT_REQUIRE_DEBT_PAID_BEFORE_RESTORE.get(),
+                        NONPAYMENT_MAX_CLAIMS_PER_TICK.get()
                 ),
                 new UcsConfigSnapshot.MapCachePolicy(
                         MAP_CACHE_MAX_SIZE_MIB.get(),

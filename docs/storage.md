@@ -39,6 +39,8 @@ Saved claims persist optional sale listings and tenant lease contracts directly 
 
 Claim tax state and server sink ledger entries are stored as top-level SavedData collections. Tax state records the next due timestamp, last paid timestamp, missed payment count, outstanding debt, delinquency timestamp, and update timestamp. Ledger entries record each paid or failed billing attempt with amount, due timestamp, processed timestamp, owner stable key, stable economy reference, provider reference, status, and detail.
 
+Nonpayment archiving preserves tax state after the active claim is archived, so admins can inspect debt and restore policy can decide whether unpaid debt blocks recovery. Clearing debt resets missed payments, delinquency, warning timestamp, and outstanding debt while scheduling the next regular tax due date.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.

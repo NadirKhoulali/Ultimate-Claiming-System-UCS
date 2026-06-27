@@ -109,11 +109,11 @@ public final class ClaimTaxService {
             ClaimTaxState updatedState;
             if (amount.compareTo(BigDecimal.ZERO) == 0) {
                 entry = paidEntry(claim, amount, state.nextDueAt(), now, reference, "", "zero tax amount");
-                updatedState = state.recordPaid(now, nextDue(state, config));
+                updatedState = state.recordPaid(now, nextRegularDue(now, config));
                 paid++;
             } else if (!pricing.economyActive(config, economyProvider)) {
                 entry = failedEntry(claim, amount, state.nextDueAt(), now, reference, "No economy provider is available.");
-                updatedState = state.recordMissed(amount, now, nextDue(state, config));
+                updatedState = state.recordMissed(amount, now, nextRetryDue(now, config));
                 failed++;
             } else if (claim.owner() instanceof PlayerOwner owner) {
                 ClaimEconomyResult charge = economyProvider.charge(
@@ -131,16 +131,16 @@ public final class ClaimTaxService {
                             charge.providerReference(),
                             "charged " + charge.formattedAmount()
                     );
-                    updatedState = state.recordPaid(now, nextDue(state, config));
+                    updatedState = state.recordPaid(now, nextRegularDue(now, config));
                     paid++;
                 } else {
                     entry = failedEntry(claim, amount, state.nextDueAt(), now, reference, charge.userMessage());
-                    updatedState = state.recordMissed(amount, now, nextDue(state, config));
+                    updatedState = state.recordMissed(amount, now, nextRetryDue(now, config));
                     failed++;
                 }
             } else {
                 entry = failedEntry(claim, amount, state.nextDueAt(), now, reference, "Claim owner has no player payment source.");
-                updatedState = state.recordMissed(amount, now, nextDue(state, config));
+                updatedState = state.recordMissed(amount, now, nextRetryDue(now, config));
                 failed++;
             }
 
@@ -214,8 +214,12 @@ public final class ClaimTaxService {
                 ));
     }
 
-    private static Instant nextDue(ClaimTaxState state, UcsConfigSnapshot config) {
-        return state.nextDueAt().plus(Duration.ofHours(config.claimTax().intervalHours()));
+    private static Instant nextRegularDue(Instant now, UcsConfigSnapshot config) {
+        return now.plus(Duration.ofHours(config.claimTax().intervalHours()));
+    }
+
+    private static Instant nextRetryDue(Instant now, UcsConfigSnapshot config) {
+        return now.plus(Duration.ofHours(config.nonpayment().retryIntervalHours()));
     }
 
     private static String referenceFor(ClaimId claimId, Instant dueAt) {

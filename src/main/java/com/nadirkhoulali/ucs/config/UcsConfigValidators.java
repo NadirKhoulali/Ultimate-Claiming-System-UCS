@@ -51,6 +51,7 @@ public final class UcsConfigValidators {
         validateProtection(config.protection(), report);
         validateEconomy(config.economy(), report);
         validateClaimTax(config.claimTax(), report);
+        validateNonpayment(config.nonpayment(), report);
         validateMapCache(config.mapCache(), report);
         validateAudit(config.audit(), report);
         validateArchive(config.archive(), report);
@@ -211,6 +212,19 @@ public final class UcsConfigValidators {
         requireAtLeast("claimTax.warningHoursBeforeDue", tax.warningHoursBeforeDue(), 0, report);
         if (tax.enabled() && tax.baseAmount() == 0.0D && tax.perChunkAmount() == 0.0D) {
             report.warning("Claim tax is enabled, but baseAmount and perChunkAmount are zero");
+        }
+    }
+
+    private static void validateNonpayment(
+            UcsConfigSnapshot.NonpaymentPolicy nonpayment,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireAtLeast("nonpayment.graceHours", nonpayment.graceHours(), 1, report);
+        requireAtLeast("nonpayment.retryIntervalHours", nonpayment.retryIntervalHours(), 1, report);
+        requireAtLeast("nonpayment.warningIntervalHours", nonpayment.warningIntervalHours(), 1, report);
+        requireAtLeast("nonpayment.maxClaimsPerTick", nonpayment.maxClaimsPerTick(), 1, report);
+        if (!nonpayment.archiveAfterGrace()) {
+            report.warning("Nonpayment archiveAfterGrace is disabled; delinquent claims will remain active");
         }
     }
 

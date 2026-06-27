@@ -100,6 +100,7 @@ final class ClaimNbtCodec {
         tag.putInt("missedPayments", taxState.missedPayments());
         tag.putString("outstandingDebt", taxState.outstandingDebt().toPlainString());
         taxState.delinquentSince().ifPresent(delinquentSince -> tag.putLong("delinquentSince", delinquentSince.toEpochMilli()));
+        taxState.lastWarningAt().ifPresent(lastWarningAt -> tag.putLong("lastWarningAt", lastWarningAt.toEpochMilli()));
         tag.putLong("updatedAt", taxState.updatedAt().toEpochMilli());
         return tag;
     }
@@ -111,6 +112,9 @@ final class ClaimNbtCodec {
         Optional<Instant> delinquentSince = tag.contains("delinquentSince", Tag.TAG_LONG)
                 ? Optional.of(Instant.ofEpochMilli(tag.getLong("delinquentSince")))
                 : Optional.empty();
+        Optional<Instant> lastWarningAt = tag.contains("lastWarningAt", Tag.TAG_LONG)
+                ? Optional.of(Instant.ofEpochMilli(tag.getLong("lastWarningAt")))
+                : Optional.empty();
         return new ClaimTaxState(
                 new ClaimId(UUID.fromString(tag.getString("claimId"))),
                 Instant.ofEpochMilli(tag.getLong("nextDueAt")),
@@ -118,6 +122,7 @@ final class ClaimNbtCodec {
                 tag.getInt("missedPayments"),
                 new BigDecimal(tag.getString("outstandingDebt")),
                 delinquentSince,
+                lastWarningAt,
                 Instant.ofEpochMilli(tag.getLong("updatedAt"))
         );
     }

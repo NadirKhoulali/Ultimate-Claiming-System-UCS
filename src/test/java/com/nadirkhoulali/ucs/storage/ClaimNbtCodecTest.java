@@ -151,6 +151,7 @@ class ClaimNbtCodecTest {
                 1,
                 BigDecimal.valueOf(25),
                 Optional.of(Instant.EPOCH.plusSeconds(20)),
+                Optional.of(Instant.EPOCH.plusSeconds(25)),
                 Instant.EPOCH.plusSeconds(30)
         );
         ClaimTaxLedgerEntry entry = new ClaimTaxLedgerEntry(

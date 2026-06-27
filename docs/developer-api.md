@@ -151,11 +151,15 @@ Tenant leases are handled by `ClaimLeaseService`. Owners offer a price, duration
 
 Recurring claim tax is handled by `ClaimTaxService`. It lazily initializes `ClaimTaxState` per claim, calculates `baseAmount + perChunkAmount * claimChunkCount`, and processes due taxes in bounded server-thread batches. Successful player-owner billing calls `ClaimEconomyProvider.charge(...)` with a stable `UCS_CLAIM_TAX:<claimId>:<dueMillis>` reference and writes a paid server sink ledger entry. Failed billing writes a failed ledger entry, increments missed payments, records outstanding debt, and leaves destructive nonpayment handling to later flows.
 
+Nonpayment is handled by `ClaimNonpaymentService`. It scans delinquent `ClaimTaxState` records in bounded batches, warns online player owners at the configured cadence, archives still-unpaid active claims after grace through `UcsClaimService.archiveClaim(...)`, and preserves the tax state as the debt record. Restore commands may block on debt depending on `nonpayment.requireDebtPaidBeforeRestore`; otherwise restored debt is deferred to the configured retry interval.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.
 
 `/ucs tax preview [limit]` shows upcoming claim tax charges and requires `ucs.economy.admin`.
+
+`/ucs debt list [limit]` and `/ucs debt clear <claimId>` inspect and clear recorded UCS debt and require `ucs.economy.admin`.
 
 ## Events
 

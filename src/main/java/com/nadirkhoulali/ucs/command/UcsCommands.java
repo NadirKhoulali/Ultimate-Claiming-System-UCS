@@ -10,6 +10,8 @@ import com.nadirkhoulali.ucs.UcsMod;
 import com.nadirkhoulali.ucs.claim.ClaimTaxPreview;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.ArchiveId;
+import com.nadirkhoulali.ucs.core.model.ClaimId;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
@@ -25,6 +27,7 @@ import net.neoforged.fml.ModList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class UcsCommands {
@@ -64,6 +67,30 @@ public final class UcsCommands {
                                                 services,
                                                 IntegerArgumentType.getInteger(context, "limit")
                                         )))))
+                .then(Commands.literal("debt")
+                        .then(Commands.literal("list")
+                                .executes(context -> listDebts(context, services, 5))
+                                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 100))
+                                        .executes(context -> listDebts(
+                                                context,
+                                                services,
+                                                IntegerArgumentType.getInteger(context, "limit")
+                                        ))))
+                        .then(Commands.literal("clear")
+                                .then(Commands.argument("claimId", StringArgumentType.word())
+                                        .suggests((context, builder) -> services.claimRepository()
+                                                .map(repository -> SharedSuggestionProvider.suggest(
+                                                        repository.taxStates().stream()
+                                                                .filter(UcsCommands::hasDebt)
+                                                                .map(state -> state.claimId().value().toString()),
+                                                        builder
+                                                ))
+                                                .orElse(builder.buildFuture()))
+                                        .executes(context -> clearDebt(
+                                                context,
+                                                services,
+                                                StringArgumentType.getString(context, "claimId")
+                                        )))))
                 .then(Commands.literal("permissions").executes(context -> showPermissions(context, services))));
     }
 
@@ -82,6 +109,8 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.bypass"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.debug"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.tax_preview"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.debt_list"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.debt_clear"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_radius"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_add"), false);
@@ -216,12 +245,76 @@ public final class UcsCommands {
         return Command.SINGLE_SUCCESS;
     }
 
+    private static int listDebts(CommandContext<CommandSourceStack> context, UcsServices services, int limit) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+
+        var debts = services.claimRepository().orElseThrow().taxStates().stream()
+                .filter(UcsCommands::hasDebt)
+                .sorted(Comparator.comparing(state -> state.delinquentSince().orElse(Instant.MAX)))
+                .limit(limit)
+                .toList();
+        if (debts.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.ucs.debt.list.empty"), false);
+            return Command.SINGLE_SUCCESS;
+        }
+
+        source.sendSuccess(() -> Component.translatable("command.ucs.debt.list.header", debts.size()), false);
+        debts.forEach(state -> source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.debt.list.entry",
+                        state.claimId().value().toString(),
+                        services.economyProviders().activeProvider().format(state.outstandingDebt()),
+                        state.missedPayments(),
+                        state.delinquentSince().map(Instant::toString).orElse("unknown")
+                ),
+                false
+        ));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int clearDebt(CommandContext<CommandSourceStack> context, UcsServices services, String claimIdValue) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+
+        Optional<ClaimId> claimId = parseClaimId(source, claimIdValue);
+        if (claimId.isEmpty()) {
+            return 0;
+        }
+        UcsConfigSnapshot config = com.nadirkhoulali.ucs.config.UcsCommonConfig.snapshot();
+        return services.claimNonpayment()
+                .clearDebt(services.claimRepository().orElseThrow(), claimId.orElseThrow(), config, Instant.now())
+                .map(state -> {
+                    source.sendSuccess(
+                            () -> Component.translatable("command.ucs.debt.clear.success", state.claimId().value().toString()),
+                            true
+                    );
+                    return Command.SINGLE_SUCCESS;
+                })
+                .orElseGet(() -> {
+                    source.sendFailure(Component.translatable("command.ucs.debt.clear.not_found", claimIdValue));
+                    return 0;
+                });
+    }
+
     private static int restoreArchive(CommandContext<CommandSourceStack> context, UcsServices services, String archiveIdValue) {
         CommandSourceStack source = context.getSource();
         if (!services.permissions().require(source, UcsPermission.ARCHIVE_RESTORE)) {
             return 0;
         }
-        if (services.claimService().isEmpty()) {
+        if (services.claimService().isEmpty() || services.claimRepository().isEmpty()) {
             source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
             return 0;
         }
@@ -235,8 +328,28 @@ public final class UcsCommands {
         }
 
         try {
+            Optional<ClaimArchiveView> archive = services.claimService().orElseThrow().findArchive(archiveId);
+            if (archive.isEmpty()) {
+                source.sendFailure(Component.translatable("command.ucs.archive.restore.not_found", archiveIdValue));
+                return 0;
+            }
+            UcsConfigSnapshot config = com.nadirkhoulali.ucs.config.UcsCommonConfig.snapshot();
+            if (services.claimNonpayment().hasBlockingDebt(
+                    services.claimRepository().orElseThrow(),
+                    archive.orElseThrow().claim().id(),
+                    config
+            )) {
+                source.sendFailure(Component.translatable("command.ucs.archive.restore.blocked_debt", archive.orElseThrow().claim().id().value().toString()));
+                return 0;
+            }
             return services.claimService().orElseThrow().restoreClaim(archiveId)
                     .map(claim -> {
+                        services.claimNonpayment().deferAfterRestore(
+                                services.claimRepository().orElseThrow(),
+                                claim.id(),
+                                config,
+                                Instant.now()
+                        );
                         source.sendSuccess(
                                 () -> Component.translatable("command.ucs.archive.restore.success", claim.displayName()),
                                 false
@@ -274,6 +387,19 @@ public final class UcsCommands {
             return "warning";
         }
         return "scheduled";
+    }
+
+    private static Optional<ClaimId> parseClaimId(CommandSourceStack source, String value) {
+        try {
+            return Optional.of(new ClaimId(UUID.fromString(value)));
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.translatable("command.ucs.debt.invalid_claim_id", value));
+            return Optional.empty();
+        }
+    }
+
+    private static boolean hasDebt(ClaimTaxState state) {
+        return state.outstandingDebt().signum() > 0;
     }
 
     private static int showPermissions(CommandContext<CommandSourceStack> context, UcsServices services) {

@@ -122,6 +122,21 @@ The tax formula is `baseAmount + perChunkAmount * claimChunkCount`. Billing char
 
 Admins with `ucs.economy.admin` can run `/ucs tax preview [limit]` to inspect upcoming charges, due status, and recorded debt.
 
+## Nonpayment
+
+Nonpayment policy controls what happens after recurring billing fails:
+
+- `nonpayment.graceHours = 72`
+- `nonpayment.retryIntervalHours = 24`
+- `nonpayment.warningIntervalHours = 24`
+- `nonpayment.archiveAfterGrace = true`
+- `nonpayment.requireDebtPaidBeforeRestore = false`
+- `nonpayment.maxClaimsPerTick = 64`
+
+Failed recurring payments keep the claim active during grace, record outstanding debt, and retry at `retryIntervalHours`. Online player owners receive warning messages no more often than `warningIntervalHours`. If `archiveAfterGrace` is enabled and debt remains after grace, UCS archives the claim through the normal archive lifecycle with actor `system:nonpayment`.
+
+Admins with `ucs.economy.admin` can run `/ucs debt list [limit]` to inspect debt and `/ucs debt clear <claimId>` to clear recorded debt. When `requireDebtPaidBeforeRestore` is true, `/ucs archive restore` is blocked until the debt is cleared.
+
 ## Map Cache
 
 Map terrain tiles are configured separately from claim SavedData. The default cache size is `1024 MiB`, with request/job limits to protect large servers.

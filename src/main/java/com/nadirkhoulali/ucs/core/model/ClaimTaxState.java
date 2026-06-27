@@ -12,6 +12,7 @@ public record ClaimTaxState(
         int missedPayments,
         BigDecimal outstandingDebt,
         Optional<Instant> delinquentSince,
+        Optional<Instant> lastWarningAt,
         Instant updatedAt
 ) {
     public ClaimTaxState {
@@ -20,6 +21,7 @@ public record ClaimTaxState(
         lastPaidAt = Objects.requireNonNull(lastPaidAt, "lastPaidAt");
         Objects.requireNonNull(outstandingDebt, "outstandingDebt");
         delinquentSince = Objects.requireNonNull(delinquentSince, "delinquentSince");
+        lastWarningAt = Objects.requireNonNull(lastWarningAt, "lastWarningAt");
         Objects.requireNonNull(updatedAt, "updatedAt");
         if (missedPayments < 0) {
             throw new IllegalArgumentException("missedPayments must be nonnegative");
@@ -40,6 +42,7 @@ public record ClaimTaxState(
                 0,
                 BigDecimal.ZERO,
                 Optional.empty(),
+                Optional.empty(),
                 now
         );
     }
@@ -51,6 +54,7 @@ public record ClaimTaxState(
                 Optional.of(paidAt),
                 0,
                 BigDecimal.ZERO,
+                Optional.empty(),
                 Optional.empty(),
                 paidAt
         );
@@ -64,7 +68,47 @@ public record ClaimTaxState(
                 missedPayments + 1,
                 outstandingDebt.add(amount),
                 delinquentSince.or(() -> Optional.of(missedAt)),
+                lastWarningAt,
                 missedAt
+        );
+    }
+
+    public ClaimTaxState markWarningSent(Instant warnedAt) {
+        return new ClaimTaxState(
+                claimId,
+                nextDueAt,
+                lastPaidAt,
+                missedPayments,
+                outstandingDebt,
+                delinquentSince,
+                Optional.of(warnedAt),
+                warnedAt
+        );
+    }
+
+    public ClaimTaxState clearDebt(Instant nextDueAt, Instant clearedAt) {
+        return new ClaimTaxState(
+                claimId,
+                nextDueAt,
+                lastPaidAt,
+                0,
+                BigDecimal.ZERO,
+                Optional.empty(),
+                Optional.empty(),
+                clearedAt
+        );
+    }
+
+    public ClaimTaxState deferAfterRestore(Instant nextDueAt, Instant restoredAt) {
+        return new ClaimTaxState(
+                claimId,
+                nextDueAt,
+                lastPaidAt,
+                missedPayments,
+                outstandingDebt,
+                outstandingDebt.compareTo(BigDecimal.ZERO) > 0 ? Optional.of(restoredAt) : Optional.empty(),
+                Optional.empty(),
+                restoredAt
         );
     }
 }

@@ -11,6 +11,7 @@ import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
 import com.nadirkhoulali.ucs.claim.ClaimLeaseService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
+import com.nadirkhoulali.ucs.claim.ClaimNonpaymentService;
 import com.nadirkhoulali.ucs.claim.ClaimRoleService;
 import com.nadirkhoulali.ucs.claim.ClaimSaleService;
 import com.nadirkhoulali.ucs.claim.ClaimTaxService;
@@ -40,6 +41,7 @@ public final class UcsServices {
     private final ClaimSaleService claimSaleService = new ClaimSaleService();
     private final ClaimLeaseService claimLeaseService = new ClaimLeaseService();
     private final ClaimTaxService claimTaxService = new ClaimTaxService();
+    private final ClaimNonpaymentService claimNonpaymentService = new ClaimNonpaymentService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
@@ -102,6 +104,10 @@ public final class UcsServices {
         return claimTaxService;
     }
 
+    public ClaimNonpaymentService claimNonpayment() {
+        return claimNonpaymentService;
+    }
+
     public ClaimTeleportService claimTeleport() {
         return claimTeleportService;
     }
@@ -131,6 +137,7 @@ public final class UcsServices {
         claimExpulsionService.clear();
         claimLeaseService.clear();
         claimTaxService.clear();
+        claimNonpaymentService.clear();
         claimMovementService.clear();
         protectionAdminService.clear();
         this.claimRepository = null;
