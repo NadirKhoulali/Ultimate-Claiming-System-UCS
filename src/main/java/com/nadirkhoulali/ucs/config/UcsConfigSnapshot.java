@@ -17,6 +17,7 @@ public record UcsConfigSnapshot(
         FlagDefaults flags,
         ProtectionPolicy protection,
         EconomyPolicy economy,
+        ClaimTaxPolicy claimTax,
         MapCachePolicy mapCache,
         AuditPolicy audit,
         ArchivePolicy archive,
@@ -24,6 +25,47 @@ public record UcsConfigSnapshot(
         CommandPolicy commands,
         MessagePolicy messages
 ) {
+    public UcsConfigSnapshot(
+            int schemaVersion,
+            boolean logStartupSummary,
+            DimensionPolicy dimensions,
+            ClaimLimitPolicy claimLimits,
+            ClaimMetadataPolicy claimMetadata,
+            ClaimTeleportPolicy claimTeleport,
+            RoleDefaults roles,
+            BanPolicy bans,
+            FlagDefaults flags,
+            ProtectionPolicy protection,
+            EconomyPolicy economy,
+            MapCachePolicy mapCache,
+            AuditPolicy audit,
+            ArchivePolicy archive,
+            InactivePurgePolicy inactivePurge,
+            CommandPolicy commands,
+            MessagePolicy messages
+    ) {
+        this(
+                schemaVersion,
+                logStartupSummary,
+                dimensions,
+                claimLimits,
+                claimMetadata,
+                claimTeleport,
+                roles,
+                bans,
+                flags,
+                protection,
+                economy,
+                ClaimTaxPolicy.defaults(),
+                mapCache,
+                audit,
+                archive,
+                inactivePurge,
+                commands,
+                messages
+        );
+    }
+
     public UcsConfigValidationReport validate() {
         return UcsConfigValidators.validate(this);
     }
@@ -139,6 +181,20 @@ public record UcsConfigSnapshot(
             double maxClaimSalePrice,
             boolean warnAboutDefaultsOnFirstRun
     ) {
+    }
+
+    public record ClaimTaxPolicy(
+            boolean enabled,
+            int intervalHours,
+            int initialDelayHours,
+            double baseAmount,
+            double perChunkAmount,
+            int maxClaimsPerTick,
+            int warningHoursBeforeDue
+    ) {
+        public static ClaimTaxPolicy defaults() {
+            return new ClaimTaxPolicy(false, 168, 168, 0.0D, 0.0D, 64, 24);
+        }
     }
 
     public record MapCachePolicy(

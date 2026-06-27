@@ -6,6 +6,8 @@ import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -26,9 +28,13 @@ public final class UcsClaimsSavedData extends SavedData {
     private static final String KEY_STORAGE_VERSION = "storageVersion";
     private static final String KEY_CLAIMS = "claims";
     private static final String KEY_ARCHIVES = "archives";
+    private static final String KEY_TAX_STATES = "taxStates";
+    private static final String KEY_TAX_LEDGER = "taxLedger";
 
     private final Map<ClaimId, Claim> claims = new LinkedHashMap<>();
     private final Map<ArchiveId, ClaimArchive> archives = new LinkedHashMap<>();
+    private final Map<ClaimId, ClaimTaxState> taxStates = new LinkedHashMap<>();
+    private final Map<java.util.UUID, ClaimTaxLedgerEntry> taxLedger = new LinkedHashMap<>();
     private ClaimSpatialIndex index = new ClaimSpatialIndex();
 
     public static SavedData.Factory<UcsClaimsSavedData> factory() {
@@ -74,6 +80,33 @@ public final class UcsClaimsSavedData extends SavedData {
             }
         }
 
+        ListTag taxStateTags = tag.getList(KEY_TAX_STATES, Tag.TAG_COMPOUND);
+        for (int i = 0; i < taxStateTags.size(); i++) {
+            try {
+                ClaimTaxState taxState = ClaimNbtCodec.decodeTaxState(taxStateTags.getCompound(i));
+                data.taxStates.put(taxState.claimId(), taxState);
+            } catch (RuntimeException exception) {
+                sanitized = true;
+                UcsMod.LOGGER.error("Skipping corrupted UCS tax state at index {}", i, exception);
+            }
+        }
+
+        ListTag taxLedgerTags = tag.getList(KEY_TAX_LEDGER, Tag.TAG_COMPOUND);
+        for (int i = 0; i < taxLedgerTags.size(); i++) {
+            try {
+                ClaimTaxLedgerEntry entry = ClaimNbtCodec.decodeTaxLedgerEntry(taxLedgerTags.getCompound(i));
+                if (data.taxLedger.containsKey(entry.id())) {
+                    sanitized = true;
+                    UcsMod.LOGGER.error("Skipping duplicate UCS tax ledger entry id {}", entry.id());
+                } else {
+                    data.taxLedger.put(entry.id(), entry);
+                }
+            } catch (RuntimeException exception) {
+                sanitized = true;
+                UcsMod.LOGGER.error("Skipping corrupted UCS tax ledger entry at index {}", i, exception);
+            }
+        }
+
         if (sanitized) {
             data.setDirty();
         }
@@ -96,6 +129,18 @@ public final class UcsClaimsSavedData extends SavedData {
                 .forEach(archiveTags::add);
         tag.put(KEY_ARCHIVES, archiveTags);
 
+        ListTag taxStateTags = new ListTag();
+        taxStates.values().stream()
+                .map(ClaimNbtCodec::encodeTaxState)
+                .forEach(taxStateTags::add);
+        tag.put(KEY_TAX_STATES, taxStateTags);
+
+        ListTag taxLedgerTags = new ListTag();
+        taxLedger.values().stream()
+                .map(ClaimNbtCodec::encodeTaxLedgerEntry)
+                .forEach(taxLedgerTags::add);
+        tag.put(KEY_TAX_LEDGER, taxLedgerTags);
+
         return tag;
     }
 
@@ -105,6 +150,14 @@ public final class UcsClaimsSavedData extends SavedData {
 
     public Collection<ClaimArchive> archives() {
         return List.copyOf(archives.values());
+    }
+
+    public Collection<ClaimTaxState> taxStates() {
+        return List.copyOf(taxStates.values());
+    }
+
+    public Collection<ClaimTaxLedgerEntry> taxLedgerEntries() {
+        return List.copyOf(taxLedger.values());
     }
 
     public Optional<ClaimArchive> findArchive(ArchiveId archiveId) {
@@ -119,9 +172,36 @@ public final class UcsClaimsSavedData extends SavedData {
         return index.findClaimId(chunkKey).flatMap(this::findById);
     }
 
+    public Optional<ClaimTaxState> findTaxState(ClaimId claimId) {
+        return Optional.ofNullable(taxStates.get(claimId));
+    }
+
     public void putClaim(Claim claim) {
         putClaimInternal(claim);
         setDirty();
+    }
+
+    public void putTaxState(ClaimTaxState taxState) {
+        taxStates.put(taxState.claimId(), taxState);
+        setDirty();
+    }
+
+    public ClaimTaxLedgerEntry appendTaxLedgerEntry(ClaimTaxLedgerEntry entry) {
+        if (taxLedger.containsKey(entry.id())) {
+            throw new ClaimRepositoryException("Duplicate tax ledger entry id " + entry.id());
+        }
+        taxLedger.put(entry.id(), entry);
+        setDirty();
+        return entry;
+    }
+
+    public Optional<ClaimTaxState> removeTaxState(ClaimId claimId) {
+        ClaimTaxState removed = taxStates.remove(claimId);
+        if (removed == null) {
+            return Optional.empty();
+        }
+        setDirty();
+        return Optional.of(removed);
     }
 
     public Optional<Claim> removeClaim(ClaimId claimId) {
@@ -130,6 +210,7 @@ public final class UcsClaimsSavedData extends SavedData {
             return Optional.empty();
         }
         index.remove(removed);
+        taxStates.remove(claimId);
         setDirty();
         return Optional.of(removed);
     }
@@ -150,6 +231,7 @@ public final class UcsClaimsSavedData extends SavedData {
             return Optional.empty();
         }
         index.remove(removed);
+        taxStates.remove(claimId);
         ClaimArchive archive = new ClaimArchive(archiveId, removed, archivedAt, reason, actor, dataVersion);
         archives.put(archive.id(), archive);
         setDirty();

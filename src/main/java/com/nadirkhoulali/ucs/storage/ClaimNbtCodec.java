@@ -9,6 +9,9 @@ import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerStatus;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.LeaseContract;
 import com.nadirkhoulali.ucs.core.model.LeaseId;
@@ -86,6 +89,66 @@ final class ClaimNbtCodec {
                 tag.getString("reason"),
                 actor,
                 dataVersion
+        );
+    }
+
+    static CompoundTag encodeTaxState(ClaimTaxState taxState) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("claimId", taxState.claimId().value().toString());
+        tag.putLong("nextDueAt", taxState.nextDueAt().toEpochMilli());
+        taxState.lastPaidAt().ifPresent(lastPaidAt -> tag.putLong("lastPaidAt", lastPaidAt.toEpochMilli()));
+        tag.putInt("missedPayments", taxState.missedPayments());
+        tag.putString("outstandingDebt", taxState.outstandingDebt().toPlainString());
+        taxState.delinquentSince().ifPresent(delinquentSince -> tag.putLong("delinquentSince", delinquentSince.toEpochMilli()));
+        tag.putLong("updatedAt", taxState.updatedAt().toEpochMilli());
+        return tag;
+    }
+
+    static ClaimTaxState decodeTaxState(CompoundTag tag) {
+        Optional<Instant> lastPaidAt = tag.contains("lastPaidAt", Tag.TAG_LONG)
+                ? Optional.of(Instant.ofEpochMilli(tag.getLong("lastPaidAt")))
+                : Optional.empty();
+        Optional<Instant> delinquentSince = tag.contains("delinquentSince", Tag.TAG_LONG)
+                ? Optional.of(Instant.ofEpochMilli(tag.getLong("delinquentSince")))
+                : Optional.empty();
+        return new ClaimTaxState(
+                new ClaimId(UUID.fromString(tag.getString("claimId"))),
+                Instant.ofEpochMilli(tag.getLong("nextDueAt")),
+                lastPaidAt,
+                tag.getInt("missedPayments"),
+                new BigDecimal(tag.getString("outstandingDebt")),
+                delinquentSince,
+                Instant.ofEpochMilli(tag.getLong("updatedAt"))
+        );
+    }
+
+    static CompoundTag encodeTaxLedgerEntry(ClaimTaxLedgerEntry entry) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("id", entry.id().toString());
+        tag.putString("claimId", entry.claimId().value().toString());
+        tag.putString("ownerKey", entry.ownerKey());
+        tag.putString("amount", entry.amount().toPlainString());
+        tag.putLong("dueAt", entry.dueAt().toEpochMilli());
+        tag.putLong("processedAt", entry.processedAt().toEpochMilli());
+        tag.putString("reference", entry.reference());
+        tag.putString("status", entry.status().name());
+        tag.putString("providerReference", entry.providerReference());
+        tag.putString("detail", entry.detail());
+        return tag;
+    }
+
+    static ClaimTaxLedgerEntry decodeTaxLedgerEntry(CompoundTag tag) {
+        return new ClaimTaxLedgerEntry(
+                UUID.fromString(tag.getString("id")),
+                new ClaimId(UUID.fromString(tag.getString("claimId"))),
+                tag.getString("ownerKey"),
+                new BigDecimal(tag.getString("amount")),
+                Instant.ofEpochMilli(tag.getLong("dueAt")),
+                Instant.ofEpochMilli(tag.getLong("processedAt")),
+                tag.getString("reference"),
+                ClaimTaxLedgerStatus.valueOf(tag.getString("status")),
+                tag.getString("providerReference"),
+                tag.getString("detail")
         );
     }
 

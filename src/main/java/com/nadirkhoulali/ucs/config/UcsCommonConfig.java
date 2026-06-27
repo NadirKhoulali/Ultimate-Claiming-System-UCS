@@ -55,6 +55,14 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.DoubleValue MAX_CLAIM_SALE_PRICE;
     public static final ModConfigSpec.BooleanValue WARN_ABOUT_ECONOMY_DEFAULTS_ON_FIRST_RUN;
 
+    public static final ModConfigSpec.BooleanValue CLAIM_TAX_ENABLED;
+    public static final ModConfigSpec.IntValue CLAIM_TAX_INTERVAL_HOURS;
+    public static final ModConfigSpec.IntValue CLAIM_TAX_INITIAL_DELAY_HOURS;
+    public static final ModConfigSpec.DoubleValue CLAIM_TAX_BASE_AMOUNT;
+    public static final ModConfigSpec.DoubleValue CLAIM_TAX_PER_CHUNK_AMOUNT;
+    public static final ModConfigSpec.IntValue CLAIM_TAX_MAX_CLAIMS_PER_TICK;
+    public static final ModConfigSpec.IntValue CLAIM_TAX_WARNING_HOURS_BEFORE_DUE;
+
     public static final ModConfigSpec.IntValue MAP_CACHE_MAX_SIZE_MIB;
     public static final ModConfigSpec.IntValue MAP_CACHE_MAX_TILE_AGE_DAYS;
     public static final ModConfigSpec.IntValue MAP_MAX_TILE_REQUESTS_PER_PLAYER;
@@ -224,6 +232,30 @@ public final class UcsCommonConfig {
                 .define("warnAboutEconomyDefaultsOnFirstRun", true);
         BUILDER.pop();
 
+        BUILDER.push("claimTax");
+        CLAIM_TAX_ENABLED = BUILDER
+                .comment("Whether UCS processes recurring claim taxes. Disabled by default.")
+                .define("enabled", false);
+        CLAIM_TAX_INTERVAL_HOURS = BUILDER
+                .comment("Hours between recurring claim tax bills.")
+                .defineInRange("intervalHours", 168, 1, 24 * 365 * 100);
+        CLAIM_TAX_INITIAL_DELAY_HOURS = BUILDER
+                .comment("Hours before a newly discovered claim receives its first tax bill.")
+                .defineInRange("initialDelayHours", 168, 0, 24 * 365 * 100);
+        CLAIM_TAX_BASE_AMOUNT = BUILDER
+                .comment("Base tax amount charged per claim each billing cycle.")
+                .defineInRange("baseAmount", 0.0D, 0.0D, 1_000_000_000.0D);
+        CLAIM_TAX_PER_CHUNK_AMOUNT = BUILDER
+                .comment("Additional tax amount charged per claimed chunk each billing cycle.")
+                .defineInRange("perChunkAmount", 0.0D, 0.0D, 1_000_000_000.0D);
+        CLAIM_TAX_MAX_CLAIMS_PER_TICK = BUILDER
+                .comment("Maximum claims tax processing may inspect per scheduler tick.")
+                .defineInRange("maxClaimsPerTick", 64, 1, 100_000);
+        CLAIM_TAX_WARNING_HOURS_BEFORE_DUE = BUILDER
+                .comment("Preview warning window for upcoming claim taxes.")
+                .defineInRange("warningHoursBeforeDue", 24, 0, 24 * 365);
+        BUILDER.pop();
+
         BUILDER.push("mapCache");
         MAP_CACHE_MAX_SIZE_MIB = BUILDER
                 .comment("Maximum file-backed terrain tile cache size in MiB.")
@@ -349,6 +381,15 @@ public final class UcsCommonConfig {
                         UNCLAIM_REFUND_RATIO.get(),
                         MAX_CLAIM_SALE_PRICE.get(),
                         WARN_ABOUT_ECONOMY_DEFAULTS_ON_FIRST_RUN.get()
+                ),
+                new UcsConfigSnapshot.ClaimTaxPolicy(
+                        CLAIM_TAX_ENABLED.get(),
+                        CLAIM_TAX_INTERVAL_HOURS.get(),
+                        CLAIM_TAX_INITIAL_DELAY_HOURS.get(),
+                        CLAIM_TAX_BASE_AMOUNT.get(),
+                        CLAIM_TAX_PER_CHUNK_AMOUNT.get(),
+                        CLAIM_TAX_MAX_CLAIMS_PER_TICK.get(),
+                        CLAIM_TAX_WARNING_HOURS_BEFORE_DUE.get()
                 ),
                 new UcsConfigSnapshot.MapCachePolicy(
                         MAP_CACHE_MAX_SIZE_MIB.get(),

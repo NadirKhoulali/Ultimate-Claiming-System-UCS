@@ -2,10 +2,13 @@ package com.nadirkhoulali.ucs.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.nadirkhoulali.ucs.api.ClaimArchiveView;
 import com.nadirkhoulali.ucs.UcsMod;
+import com.nadirkhoulali.ucs.claim.ClaimTaxPreview;
+import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.ArchiveId;
 import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
@@ -21,6 +24,7 @@ import net.neoforged.fml.ModList;
 
 import java.util.Collection;
 import java.util.Comparator;
+import java.time.Instant;
 import java.util.UUID;
 
 public final class UcsCommands {
@@ -51,6 +55,15 @@ public final class UcsCommands {
                                                 services,
                                                 StringArgumentType.getString(context, "archiveId")
                                         )))))
+                .then(Commands.literal("tax")
+                        .then(Commands.literal("preview")
+                                .executes(context -> previewTaxes(context, services, 5))
+                                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 100))
+                                        .executes(context -> previewTaxes(
+                                                context,
+                                                services,
+                                                IntegerArgumentType.getInteger(context, "limit")
+                                        )))))
                 .then(Commands.literal("permissions").executes(context -> showPermissions(context, services))));
     }
 
@@ -68,6 +81,7 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.archive_restore"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.bypass"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.debug"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.tax_preview"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_radius"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_add"), false);
@@ -165,6 +179,43 @@ public final class UcsCommands {
         return Command.SINGLE_SUCCESS;
     }
 
+    private static int previewTaxes(CommandContext<CommandSourceStack> context, UcsServices services, int limit) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+
+        UcsConfigSnapshot config = com.nadirkhoulali.ucs.config.UcsCommonConfig.snapshot();
+        Collection<ClaimTaxPreview> previews = services.claimTaxes().previewUpcomingTaxes(
+                services.claimRepository().orElseThrow(),
+                config,
+                Instant.now(),
+                limit
+        );
+        if (previews.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.ucs.tax.preview.empty"), false);
+            return Command.SINGLE_SUCCESS;
+        }
+
+        source.sendSuccess(() -> Component.translatable("command.ucs.tax.preview.header", previews.size()), false);
+        previews.forEach(preview -> source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.tax.preview.entry",
+                        preview.displayName(),
+                        services.economyProviders().activeProvider().format(preview.amount()),
+                        preview.dueAt().toString(),
+                        taxPreviewStatus(preview),
+                        services.economyProviders().activeProvider().format(preview.state().outstandingDebt())
+                ),
+                false
+        ));
+        return Command.SINGLE_SUCCESS;
+    }
+
     private static int restoreArchive(CommandContext<CommandSourceStack> context, UcsServices services, String archiveIdValue) {
         CommandSourceStack source = context.getSource();
         if (!services.permissions().require(source, UcsPermission.ARCHIVE_RESTORE)) {
@@ -213,6 +264,16 @@ public final class UcsCommands {
                 false
         );
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static String taxPreviewStatus(ClaimTaxPreview preview) {
+        if (preview.dueNow()) {
+            return "due";
+        }
+        if (preview.warningWindow()) {
+            return "warning";
+        }
+        return "scheduled";
     }
 
     private static int showPermissions(CommandContext<CommandSourceStack> context, UcsServices services) {

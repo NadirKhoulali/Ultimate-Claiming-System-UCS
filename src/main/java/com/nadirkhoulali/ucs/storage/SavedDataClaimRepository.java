@@ -5,6 +5,8 @@ import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -29,6 +31,16 @@ public final class SavedDataClaimRepository implements ClaimRepository {
     }
 
     @Override
+    public synchronized Collection<ClaimTaxState> taxStates() {
+        return savedData.taxStates();
+    }
+
+    @Override
+    public synchronized Collection<ClaimTaxLedgerEntry> taxLedgerEntries() {
+        return savedData.taxLedgerEntries();
+    }
+
+    @Override
     public synchronized Optional<ClaimArchive> findArchive(ArchiveId archiveId) {
         return savedData.findArchive(archiveId);
     }
@@ -44,9 +56,30 @@ public final class SavedDataClaimRepository implements ClaimRepository {
     }
 
     @Override
+    public synchronized Optional<ClaimTaxState> findTaxState(ClaimId claimId) {
+        return savedData.findTaxState(claimId);
+    }
+
+    @Override
     public synchronized Claim save(Claim claim) {
         savedData.putClaim(claim);
         return claim;
+    }
+
+    @Override
+    public synchronized ClaimTaxState saveTaxState(ClaimTaxState taxState) {
+        savedData.putTaxState(taxState);
+        return taxState;
+    }
+
+    @Override
+    public synchronized ClaimTaxLedgerEntry appendTaxLedgerEntry(ClaimTaxLedgerEntry entry) {
+        return savedData.appendTaxLedgerEntry(entry);
+    }
+
+    @Override
+    public synchronized Optional<ClaimTaxState> deleteTaxState(ClaimId claimId) {
+        return savedData.removeTaxState(claimId);
     }
 
     @Override

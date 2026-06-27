@@ -5,6 +5,9 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerStatus;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 import com.nadirkhoulali.ucs.core.model.LeaseContract;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.core.model.RoleId;
@@ -136,6 +139,35 @@ class ClaimNbtCodecTest {
         Claim decoded = ClaimNbtCodec.decodeClaim(tag);
 
         assertEquals(lease, decoded.leases().get(lease.id()));
+    }
+
+    @Test
+    void taxStateAndLedgerRoundTripThroughNbt() {
+        Claim claim = ClaimFixtures.claimAt(0, 0);
+        ClaimTaxState state = new ClaimTaxState(
+                claim.id(),
+                Instant.EPOCH.plusSeconds(3600),
+                Optional.of(Instant.EPOCH.plusSeconds(10)),
+                1,
+                BigDecimal.valueOf(25),
+                Optional.of(Instant.EPOCH.plusSeconds(20)),
+                Instant.EPOCH.plusSeconds(30)
+        );
+        ClaimTaxLedgerEntry entry = new ClaimTaxLedgerEntry(
+                UUID.randomUUID(),
+                claim.id(),
+                claim.owner().stableKey(),
+                BigDecimal.valueOf(25),
+                Instant.EPOCH.plusSeconds(3600),
+                Instant.EPOCH.plusSeconds(3610),
+                "UCS_CLAIM_TAX:test",
+                ClaimTaxLedgerStatus.PAID,
+                "provider-ref",
+                "charged $25"
+        );
+
+        assertEquals(state, ClaimNbtCodec.decodeTaxState(ClaimNbtCodec.encodeTaxState(state)));
+        assertEquals(entry, ClaimNbtCodec.decodeTaxLedgerEntry(ClaimNbtCodec.encodeTaxLedgerEntry(entry)));
     }
 
     private static void assertOwnerRoundTrip(Claim claim) {

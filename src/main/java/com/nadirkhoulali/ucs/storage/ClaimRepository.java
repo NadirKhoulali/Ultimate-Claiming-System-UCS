@@ -5,6 +5,8 @@ import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
+import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -15,13 +17,25 @@ public interface ClaimRepository {
 
     Collection<ClaimArchive> archives();
 
+    Collection<ClaimTaxState> taxStates();
+
+    Collection<ClaimTaxLedgerEntry> taxLedgerEntries();
+
     Optional<ClaimArchive> findArchive(ArchiveId archiveId);
 
     Optional<Claim> findById(ClaimId id);
 
     Optional<Claim> findByChunk(ChunkKey chunkKey);
 
+    Optional<ClaimTaxState> findTaxState(ClaimId claimId);
+
     Claim save(Claim claim);
+
+    ClaimTaxState saveTaxState(ClaimTaxState taxState);
+
+    ClaimTaxLedgerEntry appendTaxLedgerEntry(ClaimTaxLedgerEntry entry);
+
+    Optional<ClaimTaxState> deleteTaxState(ClaimId claimId);
 
     Optional<ClaimArchive> archive(ClaimId claimId, ArchiveId archiveId, Instant archivedAt, String reason, String actor, int dataVersion);
 

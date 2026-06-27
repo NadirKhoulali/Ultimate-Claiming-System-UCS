@@ -50,6 +50,7 @@ public final class UcsConfigValidators {
         validateFlagDefaults(config.flags(), report);
         validateProtection(config.protection(), report);
         validateEconomy(config.economy(), report);
+        validateClaimTax(config.claimTax(), report);
         validateMapCache(config.mapCache(), report);
         validateAudit(config.audit(), report);
         validateArchive(config.archive(), report);
@@ -195,6 +196,21 @@ public final class UcsConfigValidators {
                 && economy.starterClaimPrice() == 0.0D
                 && economy.pricePerExtraChunk() == 0.0D) {
             report.warning("Economy is enabled when a provider exists, but claim prices are zero");
+        }
+    }
+
+    private static void validateClaimTax(
+            UcsConfigSnapshot.ClaimTaxPolicy tax,
+            UcsConfigValidationReport.Builder report
+    ) {
+        requireAtLeast("claimTax.intervalHours", tax.intervalHours(), 1, report);
+        requireAtLeast("claimTax.initialDelayHours", tax.initialDelayHours(), 0, report);
+        requireAtLeast("claimTax.baseAmount", tax.baseAmount(), 0.0D, report);
+        requireAtLeast("claimTax.perChunkAmount", tax.perChunkAmount(), 0.0D, report);
+        requireAtLeast("claimTax.maxClaimsPerTick", tax.maxClaimsPerTick(), 1, report);
+        requireAtLeast("claimTax.warningHoursBeforeDue", tax.warningHoursBeforeDue(), 0, report);
+        if (tax.enabled() && tax.baseAmount() == 0.0D && tax.perChunkAmount() == 0.0D) {
+            report.warning("Claim tax is enabled, but baseAmount and perChunkAmount are zero");
         }
     }
 

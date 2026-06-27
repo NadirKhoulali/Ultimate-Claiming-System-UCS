@@ -106,6 +106,22 @@ Claim purchases use `UCS_CLAIM_SALE_PURCHASE`. If ownership transfer fails after
 
 Lease acceptance uses `UCS_LEASE_ACCEPT`; renewal uses `UCS_LEASE_RENEW`. If a claim save fails after tenant payment, UCS attempts `UCS_LEASE_ACCEPT_ROLLBACK` or `UCS_LEASE_RENEW_ROLLBACK`.
 
+## Claim Tax
+
+Recurring claim tax is configured separately from claim creation prices and is disabled by default:
+
+- `claimTax.enabled = false`
+- `claimTax.intervalHours = 168`
+- `claimTax.initialDelayHours = 168`
+- `claimTax.baseAmount = 0.0`
+- `claimTax.perChunkAmount = 0.0`
+- `claimTax.maxClaimsPerTick = 64`
+- `claimTax.warningHoursBeforeDue = 24`
+
+The tax formula is `baseAmount + perChunkAmount * claimChunkCount`. Billing charges player-owned claims through the active economy provider and records successful withdrawals in the UCS server sink ledger. No bank treasury account is required. Team/server-owned claims or provider failures create failed ledger entries and mark the claim tax state delinquent for the later nonpayment flow instead of deleting the claim.
+
+Admins with `ucs.economy.admin` can run `/ucs tax preview [limit]` to inspect upcoming charges, due status, and recorded debt.
+
 ## Map Cache
 
 Map terrain tiles are configured separately from claim SavedData. The default cache size is `1024 MiB`, with request/job limits to protect large servers.

@@ -18,6 +18,7 @@ public final class ClaimPricingService {
     public static final String REF_LEASE_ACCEPT_ROLLBACK = "UCS_LEASE_ACCEPT_ROLLBACK";
     public static final String REF_LEASE_RENEW = "UCS_LEASE_RENEW";
     public static final String REF_LEASE_RENEW_ROLLBACK = "UCS_LEASE_RENEW_ROLLBACK";
+    public static final String REF_CLAIM_TAX = "UCS_CLAIM_TAX";
 
     public boolean economyActive(UcsConfigSnapshot config, ClaimEconomyProvider provider) {
         return config.economy().enableWhenProviderExists() && provider != null && provider.isAvailable();

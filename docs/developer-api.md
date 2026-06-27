@@ -149,9 +149,13 @@ Claim sales are handled by `ClaimSaleService`. Owners can list and cancel sales;
 
 Tenant leases are handled by `ClaimLeaseService`. Owners offer a price, duration, and configured tenant role. Tenants accept or renew through provider transfer from tenant primary account to owner primary account. Save failure after payment attempts a reverse transfer rollback. Active leases are scanned on the server tick and expire on the server thread. Lease operations return audit entries and post `UcsClaimLeaseEvent` after repository commit.
 
+Recurring claim tax is handled by `ClaimTaxService`. It lazily initializes `ClaimTaxState` per claim, calculates `baseAmount + perChunkAmount * claimChunkCount`, and processes due taxes in bounded server-thread batches. Successful player-owner billing calls `ClaimEconomyProvider.charge(...)` with a stable `UCS_CLAIM_TAX:<claimId>:<dueMillis>` reference and writes a paid server sink ledger entry. Failed billing writes a failed ledger entry, increments missed payments, records outstanding debt, and leaves destructive nonpayment handling to later flows.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.
+
+`/ucs tax preview [limit]` shows upcoming claim tax charges and requires `ucs.economy.admin`.
 
 ## Events
 

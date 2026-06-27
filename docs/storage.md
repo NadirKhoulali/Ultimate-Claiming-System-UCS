@@ -37,6 +37,8 @@ The configured banned role is stored in the same active role assignment map. Ban
 
 Saved claims persist optional sale listings and tenant lease contracts directly inside the claim snapshot. Lease contracts store tenant owner reference, configured role id, price, duration, offer/start/expiry timestamps, status, and whether UCS granted the role. Missing lease data decodes as an empty lease map for older worlds.
 
+Claim tax state and server sink ledger entries are stored as top-level SavedData collections. Tax state records the next due timestamp, last paid timestamp, missed payment count, outstanding debt, delinquency timestamp, and update timestamp. Ledger entries record each paid or failed billing attempt with amount, due timestamp, processed timestamp, owner stable key, stable economy reference, provider reference, status, and detail.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.
