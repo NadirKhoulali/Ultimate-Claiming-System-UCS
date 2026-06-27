@@ -50,6 +50,7 @@ Economy provider calls are also server-thread only by default. Providers may tou
 - `spawnChunk`, a compatibility convenience derived from `spawn`
 - `roleAssignments`, active claim-level role memberships
 - `pendingRoleInvites`, invite-only memberships that are not active yet
+- `saleListing`, an optional persisted claim sale listing with listing id, seller player id/name, price, and listed timestamp
 
 ## Ownership
 
@@ -140,6 +141,8 @@ The UBS adapter does not compile against UBS. It reflectively calls `UltimateBan
 Server-ledger refs are treated as external sinks/sources for `charge`, `refund`, and `transfer` where possible. Direct server-ledger balances are unsupported until a provider exposes a durable server account concept.
 
 Claim and chunk pricing uses `ClaimPricingService` internally. Payment failure on claim creation or chunk add returns `PAYMENT_FAILED` and leaves claim state unchanged. If a save fails after a successful charge, UCS attempts a rollback refund and includes that refund result in the command result. Remove/split refunds occur after the claim edit succeeds and are reflected in the returned audit detail with the provider transaction reference when one exists.
+
+Claim sales are handled by `ClaimSaleService`. Owners can list and cancel sales; buyers purchase through provider transfer from buyer primary account to seller primary account. Listing ids are stable UUIDs and purchase requests may include the expected listing id to reject stale marketplace clicks. Purchase success transfers ownership to the buyer, clears the sale listing, assigns the owner role to the buyer, removes pending buyer invites, and emits an `ECONOMY_TRANSACTION` audit entry.
 
 ## Archive Admin Commands
 

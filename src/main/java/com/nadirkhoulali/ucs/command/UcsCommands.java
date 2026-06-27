@@ -85,6 +85,9 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_ban"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_unban"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_kick"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_sale"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_sale_cancel"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_sale_buy"), false);
         return Command.SINGLE_SUCCESS;
     }
 

@@ -14,8 +14,10 @@ final class FakeClaimEconomyProvider implements ClaimEconomyProvider {
     private boolean failRefund;
     private final List<String> chargeReferences = new ArrayList<>();
     private final List<String> refundReferences = new ArrayList<>();
+    private final List<String> transferReferences = new ArrayList<>();
     private BigDecimal charged = BigDecimal.ZERO;
     private BigDecimal refunded = BigDecimal.ZERO;
+    private BigDecimal transferred = BigDecimal.ZERO;
 
     void failCharge() {
         this.failCharge = true;
@@ -39,6 +41,14 @@ final class FakeClaimEconomyProvider implements ClaimEconomyProvider {
 
     List<String> refundReferences() {
         return List.copyOf(refundReferences);
+    }
+
+    BigDecimal transferred() {
+        return transferred;
+    }
+
+    List<String> transferReferences() {
+        return List.copyOf(transferReferences);
     }
 
     @Override
@@ -110,6 +120,8 @@ final class FakeClaimEconomyProvider implements ClaimEconomyProvider {
             ClaimEconomyAccountRef receiver,
             BigDecimal amount,
             String reference) {
+        transferred = transferred.add(amount);
+        transferReferences.add(reference);
         return ClaimEconomyResult.ok(amount, BigDecimal.valueOf(1_000), "transfer:" + reference, format(amount));
     }
 

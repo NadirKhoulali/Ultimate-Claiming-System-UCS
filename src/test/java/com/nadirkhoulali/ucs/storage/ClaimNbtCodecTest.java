@@ -3,6 +3,7 @@ package com.nadirkhoulali.ucs.storage;
 import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
+import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.core.model.RoleId;
@@ -11,6 +12,8 @@ import com.nadirkhoulali.ucs.core.model.TeamOwner;
 import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -74,6 +77,33 @@ class ClaimNbtCodecTest {
         Claim decoded = ClaimNbtCodec.decodeClaim(tag);
 
         assertEquals(Set.of(invitee), decoded.pendingRoleInvites().get(new RoleId("member")));
+    }
+
+    @Test
+    void saleListingRoundTripsThroughNbt() {
+        Claim claim = ClaimFixtures.claimAt(0, 0);
+        ClaimSaleListing listing = new ClaimSaleListing(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "Nadir",
+                BigDecimal.valueOf(500),
+                Instant.EPOCH
+        );
+        Claim updated = new Claim(
+                claim.id(),
+                claim.owner(),
+                claim.chunks(),
+                claim.metadata(),
+                claim.roleAssignments(),
+                claim.pendingRoleInvites(),
+                claim.flagOverrides(),
+                Optional.of(listing)
+        );
+
+        CompoundTag tag = ClaimNbtCodec.encodeClaim(updated);
+        Claim decoded = ClaimNbtCodec.decodeClaim(tag);
+
+        assertEquals(listing, decoded.saleListing().orElseThrow());
     }
 
     private static void assertOwnerRoundTrip(Claim claim) {

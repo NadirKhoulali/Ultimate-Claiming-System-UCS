@@ -12,6 +12,8 @@ public final class ClaimPricingService {
     public static final String REF_CHUNK_ADD_ROLLBACK = "UCS_CHUNK_ADD_ROLLBACK";
     public static final String REF_CHUNK_REMOVE_REFUND = "UCS_CHUNK_REMOVE_REFUND";
     public static final String REF_CHUNK_SPLIT_REFUND = "UCS_CHUNK_SPLIT_REFUND";
+    public static final String REF_CLAIM_SALE_PURCHASE = "UCS_CLAIM_SALE_PURCHASE";
+    public static final String REF_CLAIM_SALE_ROLLBACK = "UCS_CLAIM_SALE_ROLLBACK";
 
     public boolean economyActive(UcsConfigSnapshot config, ClaimEconomyProvider provider) {
         return config.economy().enableWhenProviderExists() && provider != null && provider.isAvailable();

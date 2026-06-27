@@ -13,7 +13,8 @@ public record Claim(
         ClaimMetadata metadata,
         Map<RoleId, Set<UUID>> roleAssignments,
         Map<RoleId, Set<UUID>> pendingRoleInvites,
-        Set<FlagId> flagOverrides
+        Set<FlagId> flagOverrides,
+        java.util.Optional<ClaimSaleListing> saleListing
 ) {
     public Claim {
         Objects.requireNonNull(id, "id");
@@ -26,6 +27,19 @@ public record Claim(
         roleAssignments = copyRoleAssignments(roleAssignments);
         pendingRoleInvites = copyRoleAssignments(pendingRoleInvites);
         flagOverrides = Set.copyOf(Objects.requireNonNull(flagOverrides, "flagOverrides"));
+        saleListing = Objects.requireNonNull(saleListing, "saleListing");
+    }
+
+    public Claim(
+            ClaimId id,
+            OwnerRef owner,
+            Set<ClaimChunk> chunks,
+            ClaimMetadata metadata,
+            Map<RoleId, Set<UUID>> roleAssignments,
+            Map<RoleId, Set<UUID>> pendingRoleInvites,
+            Set<FlagId> flagOverrides
+    ) {
+        this(id, owner, chunks, metadata, roleAssignments, pendingRoleInvites, flagOverrides, java.util.Optional.empty());
     }
 
     public Claim(

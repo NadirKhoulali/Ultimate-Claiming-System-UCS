@@ -136,6 +136,7 @@ public record UcsConfigSnapshot(
             double starterClaimPrice,
             double pricePerExtraChunk,
             double unclaimRefundRatio,
+            double maxClaimSalePrice,
             boolean warnAboutDefaultsOnFirstRun
     ) {
     }

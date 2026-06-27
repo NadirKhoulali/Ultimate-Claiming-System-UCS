@@ -2,6 +2,7 @@ package com.nadirkhoulali.ucs.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -25,6 +26,9 @@ import com.nadirkhoulali.ucs.claim.ClaimRoleAction;
 import com.nadirkhoulali.ucs.claim.ClaimRoleRequest;
 import com.nadirkhoulali.ucs.claim.ClaimRoleResult;
 import com.nadirkhoulali.ucs.claim.ClaimRoleTarget;
+import com.nadirkhoulali.ucs.claim.ClaimSaleFailure;
+import com.nadirkhoulali.ucs.claim.ClaimSaleRequest;
+import com.nadirkhoulali.ucs.claim.ClaimSaleResult;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportStartResult;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
@@ -45,8 +49,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 public final class ClaimCommands {
     private ClaimCommands() {
@@ -95,6 +101,22 @@ public final class ClaimCommands {
                 .then(Commands.literal("kick")
                         .then(Commands.argument("player", EntityArgument.player())
                                 .executes(context -> kick(context, services, EntityArgument.getPlayer(context, "player")))))
+                .then(Commands.literal("sale")
+                        .then(Commands.argument("price", DoubleArgumentType.doubleArg(0.01D))
+                                .executes(context -> listSale(
+                                        context,
+                                        services,
+                                        BigDecimal.valueOf(DoubleArgumentType.getDouble(context, "price"))
+                                )))
+                        .then(Commands.literal("cancel").executes(context -> cancelSale(context, services)))
+                        .then(Commands.literal("buy")
+                                .executes(context -> buySale(context, services, Optional.empty()))
+                                .then(Commands.argument("listingId", StringArgumentType.word())
+                                        .executes(context -> buySaleWithListingId(
+                                                context,
+                                                services,
+                                                StringArgumentType.getString(context, "listingId")
+                                        )))))
                 .then(Commands.literal("invite")
                         .then(Commands.literal("accept").executes(context -> acceptInvite(context, services)))
                         .then(Commands.literal("decline").executes(context -> declineInvite(context, services))))
@@ -305,6 +327,117 @@ public final class ClaimCommands {
 
         source.sendSuccess(() -> Component.translatable("command.ucs.claim.bans.kicked", target.getGameProfile().getName()), false);
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static int listSale(CommandContext<CommandSourceStack> context, UcsServices services, BigDecimal price) {
+        Optional<ClaimRepository> repository = services.claimRepository();
+        if (repository.isEmpty() || services.claimService().isEmpty()) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.player_only"));
+            return 0;
+        }
+        ClaimSaleResult result = services.claimSales().listClaimForSale(
+                repository.orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                ClaimSaleRequest.list(player.getUUID(), player.getGameProfile().getName(), currentChunk(player), price, Instant.now())
+        );
+        if (result.failure().isPresent()) {
+            context.getSource().sendFailure(saleFailureMessage(result.failure().orElseThrow()));
+            return 0;
+        }
+        context.getSource().sendSuccess(() -> Component.translatable(
+                "command.ucs.claim.sale.listed",
+                result.claim().orElseThrow().displayName(),
+                activeEconomyProvider(services).format(result.claim().orElseThrow().saleListing().orElseThrow().price()),
+                result.claim().orElseThrow().saleListing().orElseThrow().listingId().toString()
+        ), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int cancelSale(CommandContext<CommandSourceStack> context, UcsServices services) {
+        Optional<ClaimRepository> repository = services.claimRepository();
+        if (repository.isEmpty() || services.claimService().isEmpty()) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.player_only"));
+            return 0;
+        }
+        ClaimSaleResult result = services.claimSales().cancelSale(
+                repository.orElseThrow(),
+                services.claimService().orElseThrow(),
+                ClaimSaleRequest.simple(player.getUUID(), player.getGameProfile().getName(), currentChunk(player), Instant.now())
+        );
+        if (result.failure().isPresent()) {
+            context.getSource().sendFailure(saleFailureMessage(result.failure().orElseThrow()));
+            return 0;
+        }
+        context.getSource().sendSuccess(() -> Component.translatable(
+                "command.ucs.claim.sale.cancelled",
+                result.claim().orElseThrow().displayName()
+        ), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int buySale(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            Optional<UUID> expectedListingId
+    ) {
+        Optional<ClaimRepository> repository = services.claimRepository();
+        if (repository.isEmpty() || services.claimService().isEmpty()) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.player_only"));
+            return 0;
+        }
+        ClaimSaleRequest request = ClaimSaleRequest.simple(
+                player.getUUID(),
+                player.getGameProfile().getName(),
+                currentChunk(player),
+                Instant.now()
+        );
+        if (expectedListingId.isPresent()) {
+            request = request.withExpectedListingId(expectedListingId.orElseThrow());
+        }
+        ClaimSaleResult result = services.claimSales().purchaseClaim(
+                repository.orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                request,
+                activeEconomyProvider(services)
+        );
+        if (result.failure().isPresent()) {
+            context.getSource().sendFailure(saleFailureMessage(result.failure().orElseThrow()));
+            return 0;
+        }
+        context.getSource().sendSuccess(() -> appendEconomyMessage(Component.translatable(
+                "command.ucs.claim.sale.purchased",
+                result.claim().orElseThrow().displayName()
+        ), result.economyResult().orElse(null), true), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int buySaleWithListingId(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String rawListingId
+    ) {
+        Optional<UUID> listingId = parseListingId(context, rawListingId);
+        if (listingId.isEmpty()) {
+            return 0;
+        }
+        return buySale(context, services, listingId);
     }
 
     private static int acceptInvite(CommandContext<CommandSourceStack> context, UcsServices services) {
@@ -530,13 +663,17 @@ public final class ClaimCommands {
     }
 
     private static ClaimChunkEditRequest editRequest(ServerPlayer player) {
-        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
         return new ClaimChunkEditRequest(
                 player.getUUID(),
                 player.getGameProfile().getName(),
-                new ChunkKey(player.serverLevel().dimension().location().toString(), chunkPos.x, chunkPos.z),
+                currentChunk(player),
                 Instant.now()
         );
+    }
+
+    private static ChunkKey currentChunk(ServerPlayer player) {
+        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+        return new ChunkKey(player.serverLevel().dimension().location().toString(), chunkPos.x, chunkPos.z);
     }
 
     private static ClaimMetadataRequest metadataRequest(ServerPlayer player) {
@@ -611,6 +748,32 @@ public final class ClaimCommands {
             case PAYMENT_FAILED -> Component.translatable("command.ucs.claim.denied.payment_failed", failure.detail());
             case SAVE_FAILED -> Component.translatable("command.ucs.claim.denied.save_failed", failure.detail());
         };
+    }
+
+    private static Component saleFailureMessage(ClaimSaleFailure failure) {
+        return switch (failure.reason()) {
+            case NO_CLAIM_AT_CHUNK -> Component.translatable("command.ucs.claim.edit.denied.no_claim", failure.detail());
+            case NOT_OWNER -> Component.translatable("command.ucs.claim.edit.denied.not_owner", failure.detail());
+            case NOT_PLAYER_OWNED -> Component.translatable("command.ucs.claim.sale.denied.not_player_owned", failure.detail());
+            case ALREADY_LISTED -> Component.translatable("command.ucs.claim.sale.denied.already_listed", failure.detail());
+            case NOT_LISTED -> Component.translatable("command.ucs.claim.sale.denied.not_listed", failure.detail());
+            case PRICE_TOO_LOW -> Component.translatable("command.ucs.claim.sale.denied.price_too_low");
+            case PRICE_TOO_HIGH -> Component.translatable("command.ucs.claim.sale.denied.price_too_high", failure.detail());
+            case SELF_PURCHASE -> Component.translatable("command.ucs.claim.sale.denied.self_purchase");
+            case STALE_LISTING -> Component.translatable("command.ucs.claim.sale.denied.stale", failure.detail());
+            case BUYER_LIMIT_EXCEEDED -> Component.translatable("command.ucs.claim.sale.denied.buyer_limit", failure.detail());
+            case PAYMENT_FAILED -> Component.translatable("command.ucs.claim.denied.payment_failed", failure.detail());
+            case SAVE_FAILED -> Component.translatable("command.ucs.claim.denied.save_failed", failure.detail());
+        };
+    }
+
+    private static Optional<UUID> parseListingId(CommandContext<CommandSourceStack> context, String raw) {
+        try {
+            return Optional.of(UUID.fromString(raw));
+        } catch (IllegalArgumentException exception) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.sale.denied.invalid_listing_id"));
+            return Optional.empty();
+        }
     }
 
     private static Component appendEconomyMessage(Component base, ClaimEconomyResult economyResult, boolean charge) {

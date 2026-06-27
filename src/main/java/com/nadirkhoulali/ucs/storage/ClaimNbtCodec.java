@@ -7,6 +7,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
+import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.OwnerRef;
@@ -20,6 +21,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -41,6 +43,7 @@ final class ClaimNbtCodec {
         tag.put("roleAssignments", encodeRoleAssignments(claim.roleAssignments()));
         tag.put("pendingRoleInvites", encodeRoleAssignments(claim.pendingRoleInvites()));
         tag.put("flagOverrides", encodeFlags(claim.flagOverrides()));
+        claim.saleListing().ifPresent(listing -> tag.put("saleListing", encodeSaleListing(listing)));
         return tag;
     }
 
@@ -52,7 +55,8 @@ final class ClaimNbtCodec {
                 decodeMetadata(tag.getCompound("metadata")),
                 decodeRoleAssignments(tag.getList("roleAssignments", Tag.TAG_COMPOUND)),
                 decodeRoleAssignments(tag.getList("pendingRoleInvites", Tag.TAG_COMPOUND)),
-                decodeFlags(tag.getList("flagOverrides", Tag.TAG_STRING))
+                decodeFlags(tag.getList("flagOverrides", Tag.TAG_STRING)),
+                decodeSaleListing(tag)
         );
     }
 
@@ -222,5 +226,29 @@ final class ClaimNbtCodec {
             flags.add(new FlagId(tags.getString(i)));
         }
         return flags;
+    }
+
+    private static CompoundTag encodeSaleListing(ClaimSaleListing listing) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("listingId", listing.listingId().toString());
+        tag.putString("sellerPlayerId", listing.sellerPlayerId().toString());
+        tag.putString("sellerName", listing.sellerName());
+        tag.putString("price", listing.price().toPlainString());
+        tag.putLong("listedAt", listing.listedAt().toEpochMilli());
+        return tag;
+    }
+
+    private static Optional<ClaimSaleListing> decodeSaleListing(CompoundTag claimTag) {
+        if (!claimTag.contains("saleListing", Tag.TAG_COMPOUND)) {
+            return Optional.empty();
+        }
+        CompoundTag tag = claimTag.getCompound("saleListing");
+        return Optional.of(new ClaimSaleListing(
+                UUID.fromString(tag.getString("listingId")),
+                UUID.fromString(tag.getString("sellerPlayerId")),
+                tag.getString("sellerName"),
+                new BigDecimal(tag.getString("price")),
+                Instant.ofEpochMilli(tag.getLong("listedAt"))
+        ));
     }
 }

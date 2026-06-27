@@ -29,7 +29,8 @@ public record ClaimView(
         Instant updatedAt,
         Map<RoleId, Set<UUID>> roleAssignments,
         Map<RoleId, Set<UUID>> pendingRoleInvites,
-        Set<FlagId> flagOverrides
+        Set<FlagId> flagOverrides,
+        Optional<ClaimSaleView> saleListing
 ) {
     public ClaimView {
         chunks = Set.copyOf(chunks);
@@ -39,6 +40,7 @@ public record ClaimView(
         roleAssignments = copyRoleAssignments(roleAssignments);
         pendingRoleInvites = copyRoleAssignments(pendingRoleInvites);
         flagOverrides = Set.copyOf(flagOverrides);
+        saleListing = Objects.requireNonNull(saleListing, "saleListing");
     }
 
     public static ClaimView from(Claim claim) {
@@ -54,7 +56,8 @@ public record ClaimView(
                 claim.metadata().updatedAt(),
                 claim.roleAssignments(),
                 claim.pendingRoleInvites(),
-                claim.flagOverrides()
+                claim.flagOverrides(),
+                claim.saleListing().map(ClaimSaleView::from)
         );
     }
 

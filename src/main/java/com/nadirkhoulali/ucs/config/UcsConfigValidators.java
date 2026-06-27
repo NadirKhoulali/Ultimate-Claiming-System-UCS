@@ -187,6 +187,7 @@ public final class UcsConfigValidators {
     ) {
         requireAtLeast("economy.starterClaimPrice", economy.starterClaimPrice(), 0.0D, report);
         requireAtLeast("economy.pricePerExtraChunk", economy.pricePerExtraChunk(), 0.0D, report);
+        requireAtLeast("economy.maxClaimSalePrice", economy.maxClaimSalePrice(), 1.0D, report);
         if (economy.unclaimRefundRatio() < 0.0D || economy.unclaimRefundRatio() > 1.0D) {
             report.error("economy.unclaimRefundRatio must be between 0.0 and 1.0");
         }

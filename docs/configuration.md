@@ -97,8 +97,11 @@ Claim creation and chunk editing now use the active provider when `enableWhenPro
 - Adding a chunk charges `pricePerExtraChunk` before saving the expanded claim.
 - Removing or splitting out a chunk refunds `pricePerExtraChunk * unclaimRefundRatio` after the claim edit succeeds.
 - Whole-claim refund calculation is available to future unclaim flows as `creationValue * unclaimRefundRatio`.
+- Claim sale listings must be greater than zero and no higher than `maxClaimSalePrice`, which defaults to `1,000,000`.
 
 Economy transaction references are stable strings such as `UCS_CLAIM_CREATE`, `UCS_CHUNK_ADD`, `UCS_CHUNK_REMOVE_REFUND`, and rollback references for save failures after payment.
+
+Claim purchases use `UCS_CLAIM_SALE_PURCHASE`. If ownership transfer fails after payment, UCS attempts `UCS_CLAIM_SALE_ROLLBACK`.
 
 ## Map Cache
 

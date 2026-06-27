@@ -52,6 +52,7 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.DoubleValue STARTER_CLAIM_PRICE;
     public static final ModConfigSpec.DoubleValue PRICE_PER_EXTRA_CHUNK;
     public static final ModConfigSpec.DoubleValue UNCLAIM_REFUND_RATIO;
+    public static final ModConfigSpec.DoubleValue MAX_CLAIM_SALE_PRICE;
     public static final ModConfigSpec.BooleanValue WARN_ABOUT_ECONOMY_DEFAULTS_ON_FIRST_RUN;
 
     public static final ModConfigSpec.IntValue MAP_CACHE_MAX_SIZE_MIB;
@@ -215,6 +216,9 @@ public final class UcsCommonConfig {
         UNCLAIM_REFUND_RATIO = BUILDER
                 .comment("Refund ratio when unclaiming, from 0.0 to 1.0.")
                 .defineInRange("unclaimRefundRatio", 0.75D, 0.0D, 1.0D);
+        MAX_CLAIM_SALE_PRICE = BUILDER
+                .comment("Maximum player-configurable sale price for a claim.")
+                .defineInRange("maxClaimSalePrice", 1_000_000.0D, 1.0D, 1_000_000_000_000.0D);
         WARN_ABOUT_ECONOMY_DEFAULTS_ON_FIRST_RUN = BUILDER
                 .comment("Logs a warning when economy defaults may affect an existing server.")
                 .define("warnAboutEconomyDefaultsOnFirstRun", true);
@@ -343,6 +347,7 @@ public final class UcsCommonConfig {
                         STARTER_CLAIM_PRICE.get(),
                         PRICE_PER_EXTRA_CHUNK.get(),
                         UNCLAIM_REFUND_RATIO.get(),
+                        MAX_CLAIM_SALE_PRICE.get(),
                         WARN_ABOUT_ECONOMY_DEFAULTS_ON_FIRST_RUN.get()
                 ),
                 new UcsConfigSnapshot.MapCachePolicy(

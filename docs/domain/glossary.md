@@ -82,6 +82,10 @@ An optional integration that performs balance checks, charges, refunds, transfer
 
 The configured economic value of land. New claims use starter price plus extra chunk price, added chunks use extra chunk price, and removals refund the configured refund ratio.
 
+## Sale Listing
+
+A persisted owner-created offer to sell a claim for a fixed price. Purchases use the listing id to reject stale marketplace actions after cancellation or relisting.
+
 ## Audit Entry
 
 A durable record of an admin, economy, or claim-management action. Audit entries are used for debugging, abuse review, and admin console history.

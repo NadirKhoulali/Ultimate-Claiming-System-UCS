@@ -123,7 +123,9 @@ public final class ClaimMetadataService {
                 claim.chunks(),
                 updater.apply(claim.metadata()),
                 claim.roleAssignments(),
-                claim.flagOverrides()
+                claim.pendingRoleInvites(),
+                claim.flagOverrides(),
+                claim.saleListing()
         );
 
         try {

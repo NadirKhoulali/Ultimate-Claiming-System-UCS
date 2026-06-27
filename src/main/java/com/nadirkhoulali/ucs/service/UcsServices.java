@@ -11,6 +11,7 @@ import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
 import com.nadirkhoulali.ucs.claim.ClaimRoleService;
+import com.nadirkhoulali.ucs.claim.ClaimSaleService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.economy.DefaultClaimEconomyProviderRegistry;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
@@ -34,6 +35,7 @@ public final class UcsServices {
     private final ClaimExpulsionService claimExpulsionService = new ClaimExpulsionService();
     private final ClaimMetadataService claimMetadataService = new ClaimMetadataService();
     private final ClaimRoleService claimRoleService = new ClaimRoleService();
+    private final ClaimSaleService claimSaleService = new ClaimSaleService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
@@ -82,6 +84,10 @@ public final class UcsServices {
 
     public ClaimRoleService claimRoles() {
         return claimRoleService;
+    }
+
+    public ClaimSaleService claimSales() {
+        return claimSaleService;
     }
 
     public ClaimTeleportService claimTeleport() {
