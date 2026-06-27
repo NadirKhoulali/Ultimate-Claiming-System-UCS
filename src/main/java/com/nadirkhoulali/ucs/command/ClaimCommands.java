@@ -6,6 +6,10 @@ import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.nadirkhoulali.ucs.api.ClaimLeaseView;
+import com.nadirkhoulali.ucs.api.UcsClaimService;
 import com.nadirkhoulali.ucs.api.economy.ClaimEconomyProvider;
 import com.nadirkhoulali.ucs.api.economy.ClaimEconomyResult;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditAction;
@@ -18,6 +22,10 @@ import com.nadirkhoulali.ucs.claim.ClaimCreationResult;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionResult;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionStatus;
+import com.nadirkhoulali.ucs.claim.ClaimLeaseAction;
+import com.nadirkhoulali.ucs.claim.ClaimLeaseFailure;
+import com.nadirkhoulali.ucs.claim.ClaimLeaseRequest;
+import com.nadirkhoulali.ucs.claim.ClaimLeaseResult;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataFailure;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataRequest;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataResult;
@@ -37,6 +45,7 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimOwnership;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.FlagId;
+import com.nadirkhoulali.ucs.core.model.LeaseId;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.service.UcsServices;
@@ -50,7 +59,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -116,6 +127,64 @@ public final class ClaimCommands {
                                                 context,
                                                 services,
                                                 StringArgumentType.getString(context, "listingId")
+                                        )))))
+                .then(Commands.literal("lease")
+                        .then(Commands.literal("offer")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("price", DoubleArgumentType.doubleArg(0.01D))
+                                                .then(Commands.argument("days", IntegerArgumentType.integer(1))
+                                                        .executes(context -> offerLease(
+                                                                context,
+                                                                services,
+                                                                EntityArgument.getPlayer(context, "player"),
+                                                                BigDecimal.valueOf(DoubleArgumentType.getDouble(context, "price")),
+                                                                IntegerArgumentType.getInteger(context, "days"),
+                                                                "tenant"
+                                                        ))
+                                                        .then(Commands.argument("role", StringArgumentType.word())
+                                                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                                        UcsCommonConfig.snapshot().roles().defaultRoleIds(),
+                                                                        builder
+                                                                ))
+                                                                .executes(context -> offerLease(
+                                                                        context,
+                                                                        services,
+                                                                        EntityArgument.getPlayer(context, "player"),
+                                                                        BigDecimal.valueOf(DoubleArgumentType.getDouble(context, "price")),
+                                                                        IntegerArgumentType.getInteger(context, "days"),
+                                                                        StringArgumentType.getString(context, "role")
+                                                                )))))))
+                        .then(Commands.literal("accept")
+                                .then(Commands.argument("leaseId", StringArgumentType.word())
+                                        .suggests((context, builder) -> leaseIdSuggestions(context, services, builder))
+                                        .executes(context -> acceptLease(
+                                                context,
+                                                services,
+                                                StringArgumentType.getString(context, "leaseId")
+                                        ))))
+                        .then(Commands.literal("renew")
+                                .then(Commands.argument("leaseId", StringArgumentType.word())
+                                        .suggests((context, builder) -> leaseIdSuggestions(context, services, builder))
+                                        .executes(context -> renewLease(
+                                                context,
+                                                services,
+                                                StringArgumentType.getString(context, "leaseId")
+                                        ))))
+                        .then(Commands.literal("cancel")
+                                .then(Commands.argument("leaseId", StringArgumentType.word())
+                                        .suggests((context, builder) -> leaseIdSuggestions(context, services, builder))
+                                        .executes(context -> cancelLease(
+                                                context,
+                                                services,
+                                                StringArgumentType.getString(context, "leaseId")
+                                        ))))
+                        .then(Commands.literal("evict")
+                                .then(Commands.argument("leaseId", StringArgumentType.word())
+                                        .suggests((context, builder) -> leaseIdSuggestions(context, services, builder))
+                                        .executes(context -> evictLease(
+                                                context,
+                                                services,
+                                                StringArgumentType.getString(context, "leaseId")
                                         )))))
                 .then(Commands.literal("invite")
                         .then(Commands.literal("accept").executes(context -> acceptInvite(context, services)))
@@ -438,6 +507,157 @@ public final class ClaimCommands {
             return 0;
         }
         return buySale(context, services, listingId);
+    }
+
+    private static int offerLease(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            ServerPlayer tenant,
+            BigDecimal price,
+            int days,
+            String roleValue
+    ) {
+        Optional<CommandLeaseContext> leaseContext = commandLeaseContext(context, services);
+        if (leaseContext.isEmpty()) {
+            return 0;
+        }
+
+        RoleId role;
+        try {
+            role = new RoleId(roleValue);
+        } catch (IllegalArgumentException exception) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.roles.denied.role_not_configured", roleValue));
+            return 0;
+        }
+
+        ServerPlayer player = leaseContext.orElseThrow().player();
+        ClaimLeaseResult result = services.claimLeases().offerLease(
+                leaseContext.orElseThrow().repository(),
+                leaseContext.orElseThrow().claimService(),
+                UcsCommonConfig.snapshot(),
+                ClaimLeaseRequest.offer(
+                        player.getUUID(),
+                        player.getGameProfile().getName(),
+                        currentChunk(player),
+                        Instant.now(),
+                        roleTarget(tenant),
+                        price,
+                        Duration.ofDays(days),
+                        role
+                )
+        );
+        return sendLeaseResult(context, services, result);
+    }
+
+    private static int acceptLease(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String rawLeaseId
+    ) {
+        return leaseById(context, services, rawLeaseId, (leaseContext, request) -> services.claimLeases().acceptLease(
+                leaseContext.repository(),
+                leaseContext.claimService(),
+                UcsCommonConfig.snapshot(),
+                request,
+                activeEconomyProvider(services)
+        ));
+    }
+
+    private static int renewLease(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String rawLeaseId
+    ) {
+        return leaseById(context, services, rawLeaseId, (leaseContext, request) -> services.claimLeases().renewLease(
+                leaseContext.repository(),
+                leaseContext.claimService(),
+                UcsCommonConfig.snapshot(),
+                request,
+                activeEconomyProvider(services)
+        ));
+    }
+
+    private static int cancelLease(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String rawLeaseId
+    ) {
+        return leaseById(context, services, rawLeaseId, (leaseContext, request) -> services.claimLeases().cancelLease(
+                leaseContext.repository(),
+                leaseContext.claimService(),
+                request
+        ));
+    }
+
+    private static int evictLease(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String rawLeaseId
+    ) {
+        return leaseById(context, services, rawLeaseId, (leaseContext, request) -> services.claimLeases().evictTenant(
+                leaseContext.repository(),
+                leaseContext.claimService(),
+                request
+        ));
+    }
+
+    private static int leaseById(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String rawLeaseId,
+            LeaseCommand command
+    ) {
+        Optional<CommandLeaseContext> leaseContext = commandLeaseContext(context, services);
+        if (leaseContext.isEmpty()) {
+            return 0;
+        }
+        Optional<LeaseId> leaseId = parseLeaseId(context, rawLeaseId);
+        if (leaseId.isEmpty()) {
+            return 0;
+        }
+        ServerPlayer player = leaseContext.orElseThrow().player();
+        ClaimLeaseRequest request = ClaimLeaseRequest.byLease(
+                player.getUUID(),
+                player.getGameProfile().getName(),
+                currentChunk(player),
+                Instant.now(),
+                leaseId.orElseThrow()
+        );
+        return sendLeaseResult(context, services, command.execute(leaseContext.orElseThrow(), request));
+    }
+
+    private static Optional<CommandLeaseContext> commandLeaseContext(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services
+    ) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.ucs.claim.player_only"));
+            return Optional.empty();
+        }
+        if (services.claimRepository().isEmpty() || services.claimService().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return Optional.empty();
+        }
+        return Optional.of(new CommandLeaseContext(
+                player,
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow()
+        ));
+    }
+
+    private static int sendLeaseResult(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            ClaimLeaseResult result
+    ) {
+        if (result.failure().isPresent()) {
+            context.getSource().sendFailure(leaseFailureMessage(result.failure().orElseThrow()));
+            return 0;
+        }
+        context.getSource().sendSuccess(() -> leaseSuccessMessage(services, result), false);
+        return Command.SINGLE_SUCCESS;
     }
 
     private static int acceptInvite(CommandContext<CommandSourceStack> context, UcsServices services) {
@@ -767,6 +987,69 @@ public final class ClaimCommands {
         };
     }
 
+    private static Component leaseSuccessMessage(UcsServices services, ClaimLeaseResult result) {
+        ClaimLeaseView lease = result.lease().orElseThrow();
+        String tenant = lease.tenant().playerName().orElse(lease.tenant().stableKey());
+        String amount = activeEconomyProvider(services).format(lease.price());
+        long days = Math.max(1L, Duration.ofSeconds(lease.durationSeconds()).toDays());
+        return switch (result.action()) {
+            case OFFER -> Component.translatable(
+                    "command.ucs.claim.lease.offered",
+                    tenant,
+                    result.claim().orElseThrow().displayName(),
+                    amount,
+                    days,
+                    lease.roleId().value(),
+                    lease.id().value().toString()
+            );
+            case ACCEPT -> appendEconomyMessage(Component.translatable(
+                    "command.ucs.claim.lease.accepted",
+                    result.claim().orElseThrow().displayName(),
+                    lease.expiresAt().map(Instant::toString).orElse("unknown")
+            ), result.economyResult().orElse(null), true);
+            case RENEW -> appendEconomyMessage(Component.translatable(
+                    "command.ucs.claim.lease.renewed",
+                    result.claim().orElseThrow().displayName(),
+                    lease.expiresAt().map(Instant::toString).orElse("unknown")
+            ), result.economyResult().orElse(null), true);
+            case CANCEL -> Component.translatable(
+                    "command.ucs.claim.lease.cancelled",
+                    result.claim().orElseThrow().displayName(),
+                    lease.id().value().toString()
+            );
+            case EVICT -> Component.translatable(
+                    "command.ucs.claim.lease.evicted",
+                    tenant,
+                    result.claim().orElseThrow().displayName()
+            );
+            case EXPIRE -> Component.translatable(
+                    "command.ucs.claim.lease.expired",
+                    result.claim().orElseThrow().displayName(),
+                    lease.id().value().toString()
+            );
+        };
+    }
+
+    private static Component leaseFailureMessage(ClaimLeaseFailure failure) {
+        return switch (failure.reason()) {
+            case NO_CLAIM_AT_CHUNK -> Component.translatable("command.ucs.claim.edit.denied.no_claim", failure.detail());
+            case NO_LEASE -> Component.translatable("command.ucs.claim.lease.denied.no_lease", failure.detail());
+            case NOT_OWNER -> Component.translatable("command.ucs.claim.edit.denied.not_owner", failure.detail());
+            case NOT_PLAYER_OWNED -> Component.translatable("command.ucs.claim.sale.denied.not_player_owned", failure.detail());
+            case TENANT_IS_OWNER -> Component.translatable("command.ucs.claim.lease.denied.tenant_owner");
+            case ALREADY_HAS_LEASE -> Component.translatable("command.ucs.claim.lease.denied.already_has_lease", failure.detail());
+            case TENANT_BANNED -> Component.translatable("command.ucs.claim.roles.denied.banned", failure.detail());
+            case ROLE_NOT_CONFIGURED -> Component.translatable("command.ucs.claim.roles.denied.role_not_configured", failure.detail());
+            case PRICE_TOO_LOW -> Component.translatable("command.ucs.claim.sale.denied.price_too_low");
+            case DURATION_TOO_SHORT -> Component.translatable("command.ucs.claim.lease.denied.duration_too_short");
+            case NOT_TENANT -> Component.translatable("command.ucs.claim.lease.denied.not_tenant");
+            case NOT_OFFERED -> Component.translatable("command.ucs.claim.lease.denied.not_offered", failure.detail());
+            case NOT_ACTIVE -> Component.translatable("command.ucs.claim.lease.denied.not_active", failure.detail());
+            case PAYMENT_FAILED -> Component.translatable("command.ucs.claim.denied.payment_failed", failure.detail());
+            case SAVE_FAILED -> Component.translatable("command.ucs.claim.denied.save_failed", failure.detail());
+        };
+    }
+
     private static Optional<UUID> parseListingId(CommandContext<CommandSourceStack> context, String raw) {
         try {
             return Optional.of(UUID.fromString(raw));
@@ -774,6 +1057,33 @@ public final class ClaimCommands {
             context.getSource().sendFailure(Component.translatable("command.ucs.claim.sale.denied.invalid_listing_id"));
             return Optional.empty();
         }
+    }
+
+    private static Optional<LeaseId> parseLeaseId(CommandContext<CommandSourceStack> context, String raw) {
+        try {
+            return Optional.of(new LeaseId(UUID.fromString(raw)));
+        } catch (IllegalArgumentException exception) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.lease.denied.invalid_lease_id"));
+            return Optional.empty();
+        }
+    }
+
+    private static CompletableFuture<Suggestions> leaseIdSuggestions(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            SuggestionsBuilder builder
+    ) {
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null || services.claimRepository().isEmpty()) {
+            return builder.buildFuture();
+        }
+        return services.claimRepository().orElseThrow()
+                .findByChunk(currentChunk(player))
+                .map(claim -> SharedSuggestionProvider.suggest(
+                        claim.leases().keySet().stream().map(leaseId -> leaseId.value().toString()),
+                        builder
+                ))
+                .orElse(builder.buildFuture());
     }
 
     private static Component appendEconomyMessage(Component base, ClaimEconomyResult economyResult, boolean charge) {
@@ -862,5 +1172,17 @@ public final class ClaimCommands {
     @FunctionalInterface
     private interface RoleCommand {
         ClaimRoleResult execute(ClaimRoleRequest request);
+    }
+
+    @FunctionalInterface
+    private interface LeaseCommand {
+        ClaimLeaseResult execute(CommandLeaseContext context, ClaimLeaseRequest request);
+    }
+
+    private record CommandLeaseContext(
+            ServerPlayer player,
+            ClaimRepository repository,
+            UcsClaimService claimService
+    ) {
     }
 }

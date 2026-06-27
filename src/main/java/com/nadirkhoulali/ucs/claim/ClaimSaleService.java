@@ -12,6 +12,7 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.ClaimOwnership;
 import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
+import com.nadirkhoulali.ucs.core.model.LeaseContract;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
@@ -250,7 +251,8 @@ public final class ClaimSaleService {
                 claim.roleAssignments(),
                 claim.pendingRoleInvites(),
                 claim.flagOverrides(),
-                listing
+                listing,
+                claim.leases()
         );
     }
 
@@ -264,7 +266,8 @@ public final class ClaimSaleService {
                 ownershipRoles(claim, request.playerId()),
                 pendingInvitesWithout(claim, request.playerId()),
                 claim.flagOverrides(),
-                Optional.empty()
+                Optional.empty(),
+                leasesAfterSale(claim, request.playerId())
         );
     }
 
@@ -291,6 +294,18 @@ public final class ClaimSaleService {
         invites.values().forEach(players -> players.remove(buyerId));
         invites.entrySet().removeIf(entry -> entry.getValue().isEmpty());
         return immutableRoles(invites);
+    }
+
+    private static Map<com.nadirkhoulali.ucs.core.model.LeaseId, LeaseContract> leasesAfterSale(Claim claim, UUID buyerId) {
+        Map<com.nadirkhoulali.ucs.core.model.LeaseId, LeaseContract> leases = new LinkedHashMap<>();
+        claim.leases().forEach((leaseId, lease) -> {
+            if (lease.tenant() instanceof PlayerOwner player && player.playerId().equals(buyerId)) {
+                leases.put(leaseId, lease.cancel());
+            } else {
+                leases.put(leaseId, lease);
+            }
+        });
+        return Map.copyOf(leases);
     }
 
     private static Map<RoleId, Set<UUID>> mutableRoles(Map<RoleId, Set<UUID>> source) {

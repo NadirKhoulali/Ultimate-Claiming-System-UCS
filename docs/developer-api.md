@@ -51,6 +51,7 @@ Economy provider calls are also server-thread only by default. Providers may tou
 - `roleAssignments`, active claim-level role memberships
 - `pendingRoleInvites`, invite-only memberships that are not active yet
 - `saleListing`, an optional persisted claim sale listing with listing id, seller player id/name, price, and listed timestamp
+- `leases`, persisted tenant lease contracts keyed by lease id, including tenant owner view, role id, price, duration, lifecycle timestamps, status, and whether UCS granted the role
 
 ## Ownership
 
@@ -85,6 +86,8 @@ Built-in player commands update claim metadata through the same service path, so
 ## Roles
 
 Built-in player commands can trust, untrust, assign configured roles, and accept or decline pending invites. Active assignments and pending invites are persisted on the claim and exposed through `ClaimView`.
+
+Tenant leases use the same role system. A lease offer stores the intended tenant role but does not grant it. Accepting a lease transfers payment from tenant to owner, activates the lease window, and grants the configured role when UCS had to add that role. Expiration, cancellation, and eviction revoke only the role grant that UCS recorded for that lease, so a pre-existing tenant role is preserved.
 
 `ClaimRoleResolver.effectiveRoles(...)` provides the first server-side role resolution helper for later protection, GUI, and marketplace systems. Banned roles take precedence over all other role assignments.
 
@@ -144,6 +147,8 @@ Claim and chunk pricing uses `ClaimPricingService` internally. Payment failure o
 
 Claim sales are handled by `ClaimSaleService`. Owners can list and cancel sales; buyers purchase through provider transfer from buyer primary account to seller primary account. Listing ids are stable UUIDs and purchase requests may include the expected listing id to reject stale marketplace clicks. Purchase success transfers ownership to the buyer, clears the sale listing, assigns the owner role to the buyer, removes pending buyer invites, and emits an `ECONOMY_TRANSACTION` audit entry.
 
+Tenant leases are handled by `ClaimLeaseService`. Owners offer a price, duration, and configured tenant role. Tenants accept or renew through provider transfer from tenant primary account to owner primary account. Save failure after payment attempts a reverse transfer rollback. Active leases are scanned on the server tick and expire on the server thread. Lease operations return audit entries and post `UcsClaimLeaseEvent` after repository commit.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.
@@ -157,9 +162,12 @@ Claim events live under `com.nadirkhoulali.ucs.api.event`:
 - `UcsClaimEvent.Deleted`
 - `UcsClaimEvent.Archived`
 - `UcsClaimEvent.Restored`
+- `UcsClaimLeaseEvent`
 - `UcsProtectionDecisionEvent`
 
 `UcsProtectionDecisionEvent` is cancellable. Calling `deny(reason)` cancels and denies the decision; calling `allow(reason)` clears cancellation and allows it.
+
+`UcsClaimLeaseEvent` exposes the lease action (`OFFER`, `ACCEPT`, `RENEW`, `CANCEL`, `EVICT`, or `EXPIRE`), the committed `ClaimView`, the committed `ClaimLeaseView`, and the event timestamp.
 
 ## Versioning
 

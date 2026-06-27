@@ -6,6 +6,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimChunk;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.FlagId;
+import com.nadirkhoulali.ucs.core.model.LeaseId;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 
 import java.time.Instant;
@@ -30,7 +31,8 @@ public record ClaimView(
         Map<RoleId, Set<UUID>> roleAssignments,
         Map<RoleId, Set<UUID>> pendingRoleInvites,
         Set<FlagId> flagOverrides,
-        Optional<ClaimSaleView> saleListing
+        Optional<ClaimSaleView> saleListing,
+        Map<LeaseId, ClaimLeaseView> leases
 ) {
     public ClaimView {
         chunks = Set.copyOf(chunks);
@@ -41,6 +43,7 @@ public record ClaimView(
         pendingRoleInvites = copyRoleAssignments(pendingRoleInvites);
         flagOverrides = Set.copyOf(flagOverrides);
         saleListing = Objects.requireNonNull(saleListing, "saleListing");
+        leases = Map.copyOf(Objects.requireNonNull(leases, "leases"));
     }
 
     public static ClaimView from(Claim claim) {
@@ -57,7 +60,12 @@ public record ClaimView(
                 claim.roleAssignments(),
                 claim.pendingRoleInvites(),
                 claim.flagOverrides(),
-                claim.saleListing().map(ClaimSaleView::from)
+                claim.saleListing().map(ClaimSaleView::from),
+                claim.leases().entrySet().stream()
+                        .collect(Collectors.toUnmodifiableMap(
+                                Map.Entry::getKey,
+                                entry -> ClaimLeaseView.from(entry.getValue())
+                        ))
         );
     }
 

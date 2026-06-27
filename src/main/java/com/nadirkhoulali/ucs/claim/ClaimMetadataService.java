@@ -125,7 +125,8 @@ public final class ClaimMetadataService {
                 claim.roleAssignments(),
                 claim.pendingRoleInvites(),
                 claim.flagOverrides(),
-                claim.saleListing()
+                claim.saleListing(),
+                claim.leases()
         );
 
         try {

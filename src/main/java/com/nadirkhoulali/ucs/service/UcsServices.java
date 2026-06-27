@@ -9,6 +9,7 @@ import com.nadirkhoulali.ucs.api.protection.ProtectionFlagRegistry;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditService;
 import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
+import com.nadirkhoulali.ucs.claim.ClaimLeaseService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
 import com.nadirkhoulali.ucs.claim.ClaimRoleService;
 import com.nadirkhoulali.ucs.claim.ClaimSaleService;
@@ -36,6 +37,7 @@ public final class UcsServices {
     private final ClaimMetadataService claimMetadataService = new ClaimMetadataService();
     private final ClaimRoleService claimRoleService = new ClaimRoleService();
     private final ClaimSaleService claimSaleService = new ClaimSaleService();
+    private final ClaimLeaseService claimLeaseService = new ClaimLeaseService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
@@ -90,6 +92,10 @@ public final class UcsServices {
         return claimSaleService;
     }
 
+    public ClaimLeaseService claimLeases() {
+        return claimLeaseService;
+    }
+
     public ClaimTeleportService claimTeleport() {
         return claimTeleportService;
     }
@@ -117,6 +123,7 @@ public final class UcsServices {
     public synchronized void clearServerState() {
         claimTeleportService.clear();
         claimExpulsionService.clear();
+        claimLeaseService.clear();
         claimMovementService.clear();
         protectionAdminService.clear();
         this.claimRepository = null;

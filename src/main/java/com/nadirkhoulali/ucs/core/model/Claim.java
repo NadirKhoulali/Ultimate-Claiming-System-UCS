@@ -3,6 +3,7 @@ package com.nadirkhoulali.ucs.core.model;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -14,7 +15,8 @@ public record Claim(
         Map<RoleId, Set<UUID>> roleAssignments,
         Map<RoleId, Set<UUID>> pendingRoleInvites,
         Set<FlagId> flagOverrides,
-        java.util.Optional<ClaimSaleListing> saleListing
+        Optional<ClaimSaleListing> saleListing,
+        Map<LeaseId, LeaseContract> leases
 ) {
     public Claim {
         Objects.requireNonNull(id, "id");
@@ -28,6 +30,28 @@ public record Claim(
         pendingRoleInvites = copyRoleAssignments(pendingRoleInvites);
         flagOverrides = Set.copyOf(Objects.requireNonNull(flagOverrides, "flagOverrides"));
         saleListing = Objects.requireNonNull(saleListing, "saleListing");
+        leases = copyLeases(leases);
+        leases.forEach((leaseId, lease) -> {
+            if (!lease.id().equals(leaseId)) {
+                throw new IllegalArgumentException("lease map key must match lease id");
+            }
+            if (!lease.claimId().equals(id)) {
+                throw new IllegalArgumentException("lease claim id must match claim id");
+            }
+        });
+    }
+
+    public Claim(
+            ClaimId id,
+            OwnerRef owner,
+            Set<ClaimChunk> chunks,
+            ClaimMetadata metadata,
+            Map<RoleId, Set<UUID>> roleAssignments,
+            Map<RoleId, Set<UUID>> pendingRoleInvites,
+            Set<FlagId> flagOverrides,
+            Optional<ClaimSaleListing> saleListing
+    ) {
+        this(id, owner, chunks, metadata, roleAssignments, pendingRoleInvites, flagOverrides, saleListing, Map.of());
     }
 
     public Claim(
@@ -39,7 +63,7 @@ public record Claim(
             Map<RoleId, Set<UUID>> pendingRoleInvites,
             Set<FlagId> flagOverrides
     ) {
-        this(id, owner, chunks, metadata, roleAssignments, pendingRoleInvites, flagOverrides, java.util.Optional.empty());
+        this(id, owner, chunks, metadata, roleAssignments, pendingRoleInvites, flagOverrides, Optional.empty(), Map.of());
     }
 
     public Claim(
@@ -64,6 +88,16 @@ public record Claim(
         assignments.forEach((role, players) -> copied.put(
                 Objects.requireNonNull(role, "role"),
                 Set.copyOf(Objects.requireNonNull(players, "players"))
+        ));
+        return Map.copyOf(copied);
+    }
+
+    private static Map<LeaseId, LeaseContract> copyLeases(Map<LeaseId, LeaseContract> leases) {
+        Objects.requireNonNull(leases, "leases");
+        Map<LeaseId, LeaseContract> copied = new LinkedHashMap<>();
+        leases.forEach((id, lease) -> copied.put(
+                Objects.requireNonNull(id, "leaseId"),
+                Objects.requireNonNull(lease, "lease")
         ));
         return Map.copyOf(copied);
     }

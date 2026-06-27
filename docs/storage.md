@@ -33,6 +33,10 @@ Saved claims persist active `roleAssignments` and pending `pendingRoleInvites` a
 
 The configured banned role is stored in the same active role assignment map. Ban commands remove conflicting non-owner role grants before assigning the banned role.
 
+## Marketplace Data
+
+Saved claims persist optional sale listings and tenant lease contracts directly inside the claim snapshot. Lease contracts store tenant owner reference, configured role id, price, duration, offer/start/expiry timestamps, status, and whether UCS granted the role. Missing lease data decodes as an empty lease map for older worlds.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.

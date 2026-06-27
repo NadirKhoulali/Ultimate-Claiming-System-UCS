@@ -310,7 +310,8 @@ public final class ClaimRoleService {
                 assignments,
                 invites,
                 claim.flagOverrides(),
-                claim.saleListing()
+                claim.saleListing(),
+                claim.leases()
         );
 
         try {

@@ -5,6 +5,7 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
+import com.nadirkhoulali.ucs.core.model.LeaseContract;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.core.model.ServerOwner;
@@ -13,6 +14,7 @@ import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -104,6 +106,36 @@ class ClaimNbtCodecTest {
         Claim decoded = ClaimNbtCodec.decodeClaim(tag);
 
         assertEquals(listing, decoded.saleListing().orElseThrow());
+    }
+
+    @Test
+    void leasesRoundTripThroughNbt() {
+        Claim claim = ClaimFixtures.claimAt(0, 0);
+        LeaseContract lease = LeaseContract.offer(
+                com.nadirkhoulali.ucs.core.model.LeaseId.random(),
+                claim.id(),
+                new PlayerOwner(UUID.randomUUID(), "Tenant"),
+                new RoleId("tenant"),
+                BigDecimal.valueOf(75),
+                Duration.ofDays(5),
+                Instant.EPOCH
+        ).activate(Instant.EPOCH.plusSeconds(20), true);
+        Claim updated = new Claim(
+                claim.id(),
+                claim.owner(),
+                claim.chunks(),
+                claim.metadata(),
+                claim.roleAssignments(),
+                claim.pendingRoleInvites(),
+                claim.flagOverrides(),
+                claim.saleListing(),
+                Map.of(lease.id(), lease)
+        );
+
+        CompoundTag tag = ClaimNbtCodec.encodeClaim(updated);
+        Claim decoded = ClaimNbtCodec.decodeClaim(tag);
+
+        assertEquals(lease, decoded.leases().get(lease.id()));
     }
 
     private static void assertOwnerRoundTrip(Claim claim) {

@@ -10,6 +10,9 @@ import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.ClaimSaleListing;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.FlagId;
+import com.nadirkhoulali.ucs.core.model.LeaseContract;
+import com.nadirkhoulali.ucs.core.model.LeaseId;
+import com.nadirkhoulali.ucs.core.model.LeaseStatus;
 import com.nadirkhoulali.ucs.core.model.OwnerRef;
 import com.nadirkhoulali.ucs.core.model.OwnerType;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
@@ -44,6 +47,7 @@ final class ClaimNbtCodec {
         tag.put("pendingRoleInvites", encodeRoleAssignments(claim.pendingRoleInvites()));
         tag.put("flagOverrides", encodeFlags(claim.flagOverrides()));
         claim.saleListing().ifPresent(listing -> tag.put("saleListing", encodeSaleListing(listing)));
+        tag.put("leases", encodeLeases(claim.leases()));
         return tag;
     }
 
@@ -56,7 +60,8 @@ final class ClaimNbtCodec {
                 decodeRoleAssignments(tag.getList("roleAssignments", Tag.TAG_COMPOUND)),
                 decodeRoleAssignments(tag.getList("pendingRoleInvites", Tag.TAG_COMPOUND)),
                 decodeFlags(tag.getList("flagOverrides", Tag.TAG_STRING)),
-                decodeSaleListing(tag)
+                decodeSaleListing(tag),
+                decodeLeases(tag.getList("leases", Tag.TAG_COMPOUND))
         );
     }
 
@@ -250,5 +255,60 @@ final class ClaimNbtCodec {
                 new BigDecimal(tag.getString("price")),
                 Instant.ofEpochMilli(tag.getLong("listedAt"))
         ));
+    }
+
+    private static ListTag encodeLeases(Map<LeaseId, LeaseContract> leases) {
+        ListTag tags = new ListTag();
+        leases.values().stream()
+                .map(ClaimNbtCodec::encodeLease)
+                .forEach(tags::add);
+        return tags;
+    }
+
+    private static CompoundTag encodeLease(LeaseContract lease) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("id", lease.id().value().toString());
+        tag.putString("claimId", lease.claimId().value().toString());
+        tag.put("tenant", encodeOwner(lease.tenant()));
+        tag.putString("roleId", lease.roleId().value());
+        tag.putString("price", lease.price().toPlainString());
+        tag.putLong("durationSeconds", lease.durationSeconds());
+        tag.putLong("offeredAt", lease.offeredAt().toEpochMilli());
+        lease.startsAt().ifPresent(startsAt -> tag.putLong("startsAt", startsAt.toEpochMilli()));
+        lease.expiresAt().ifPresent(expiresAt -> tag.putLong("expiresAt", expiresAt.toEpochMilli()));
+        tag.putString("status", lease.status().name());
+        tag.putBoolean("roleGranted", lease.roleGranted());
+        return tag;
+    }
+
+    private static Map<LeaseId, LeaseContract> decodeLeases(ListTag tags) {
+        Map<LeaseId, LeaseContract> leases = new LinkedHashMap<>();
+        for (int i = 0; i < tags.size(); i++) {
+            LeaseContract lease = decodeLease(tags.getCompound(i));
+            leases.put(lease.id(), lease);
+        }
+        return Map.copyOf(leases);
+    }
+
+    private static LeaseContract decodeLease(CompoundTag tag) {
+        Optional<Instant> startsAt = tag.contains("startsAt", Tag.TAG_LONG)
+                ? Optional.of(Instant.ofEpochMilli(tag.getLong("startsAt")))
+                : Optional.empty();
+        Optional<Instant> expiresAt = tag.contains("expiresAt", Tag.TAG_LONG)
+                ? Optional.of(Instant.ofEpochMilli(tag.getLong("expiresAt")))
+                : Optional.empty();
+        return new LeaseContract(
+                new LeaseId(UUID.fromString(tag.getString("id"))),
+                new ClaimId(UUID.fromString(tag.getString("claimId"))),
+                decodeOwner(tag.getCompound("tenant")),
+                new RoleId(tag.getString("roleId")),
+                new BigDecimal(tag.getString("price")),
+                tag.getLong("durationSeconds"),
+                Instant.ofEpochMilli(tag.getLong("offeredAt")),
+                startsAt,
+                expiresAt,
+                LeaseStatus.valueOf(tag.getString("status")),
+                tag.getBoolean("roleGranted")
+        );
     }
 }

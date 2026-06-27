@@ -528,7 +528,9 @@ public final class ClaimChunkEditService {
                 ),
                 claim.roleAssignments(),
                 claim.pendingRoleInvites(),
-                claim.flagOverrides()
+                claim.flagOverrides(),
+                claim.saleListing(),
+                claim.leases()
         );
     }
 
@@ -549,7 +551,9 @@ public final class ClaimChunkEditService {
                     new ClaimMetadata(displayName, original.metadata().description(), Optional.empty(), original.metadata().createdAt(), updatedAt),
                     original.roleAssignments(),
                     original.pendingRoleInvites(),
-                    original.flagOverrides()
+                    original.flagOverrides(),
+                    index == 0 ? original.saleListing() : Optional.empty(),
+                    index == 0 ? original.leases() : Map.of()
             ));
         }
         return List.copyOf(claims);

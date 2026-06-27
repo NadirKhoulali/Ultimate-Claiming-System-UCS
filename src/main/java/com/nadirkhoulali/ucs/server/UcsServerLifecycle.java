@@ -112,6 +112,7 @@ public final class UcsServerLifecycle {
             UcsConfigSnapshot config = UcsCommonConfig.snapshot();
             services.claimTeleport().tick(event.getServer(), repository, config);
             services.claimExpulsion().tick(event.getServer(), repository, config);
+            services.claimService().ifPresent(claimService -> services.claimLeases().tick(event.getServer(), repository, claimService));
             services.claimService().ifPresent(claimService -> services.claimMovement().tick(
                     event.getServer(),
                     repository,
