@@ -28,7 +28,7 @@ class FileMapTileCacheTest {
         Path path = tempDir.relativize(cache.pathFor(key));
 
         assertEquals(
-                Path.of("v2", "minecraft", "overworld", "z3", "s_-1_2", "-1_512.ucstile"),
+                Path.of("v3", "minecraft", "overworld", "z3", "s_-1_2", "-1_512.ucstile"),
                 path
         );
     }
