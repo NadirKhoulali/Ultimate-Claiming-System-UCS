@@ -19,7 +19,8 @@ public final class UcsConfigDefaults {
             "owner",
             "member",
             "tenant",
-            "visitor"
+            "visitor",
+            "banned"
     );
 
     public static final List<String> DEFAULT_PROTECTION_FLAG_IDS = List.of(

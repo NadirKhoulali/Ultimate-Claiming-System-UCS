@@ -46,6 +46,10 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_description"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_setspawn"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_home"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_trust"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_untrust"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_role"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_invite"), false);
         return Command.SINGLE_SUCCESS;
     }
 

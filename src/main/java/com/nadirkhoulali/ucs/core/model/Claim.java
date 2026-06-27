@@ -12,6 +12,7 @@ public record Claim(
         Set<ClaimChunk> chunks,
         ClaimMetadata metadata,
         Map<RoleId, Set<UUID>> roleAssignments,
+        Map<RoleId, Set<UUID>> pendingRoleInvites,
         Set<FlagId> flagOverrides
 ) {
     public Claim {
@@ -23,7 +24,19 @@ public record Claim(
         }
         metadata = Objects.requireNonNull(metadata, "metadata");
         roleAssignments = copyRoleAssignments(roleAssignments);
+        pendingRoleInvites = copyRoleAssignments(pendingRoleInvites);
         flagOverrides = Set.copyOf(Objects.requireNonNull(flagOverrides, "flagOverrides"));
+    }
+
+    public Claim(
+            ClaimId id,
+            OwnerRef owner,
+            Set<ClaimChunk> chunks,
+            ClaimMetadata metadata,
+            Map<RoleId, Set<UUID>> roleAssignments,
+            Set<FlagId> flagOverrides
+    ) {
+        this(id, owner, chunks, metadata, roleAssignments, Map.of(), flagOverrides);
     }
 
     public boolean contains(ChunkKey key) {

@@ -109,6 +109,33 @@ class UcsConfigValidatorsTest {
     }
 
     @Test
+    void rolePolicyIdsAreIncludedInSnapshotRoles() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
+                new UcsConfigSnapshot.RoleDefaults(List.of("owner", "visitor"), "member", "banned", false),
+                base.flags(),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        UcsConfigValidationReport report = snapshot.validate();
+
+        assertTrue(report.valid());
+        assertTrue(snapshot.roles().defaultRoleIds().contains("member"));
+        assertTrue(snapshot.roles().defaultRoleIds().contains("banned"));
+    }
+
+    @Test
     void snapshotDefensivelyCopiesLists() {
         ArrayList<String> enabled = new ArrayList<>(List.of("minecraft:overworld"));
         UcsConfigSnapshot snapshot = withDimensions(enabled, List.of());
@@ -151,7 +178,7 @@ class UcsConfigValidatorsTest {
                 new UcsConfigSnapshot.ClaimLimitPolicy(16, 256, 128, 5, true),
                 new UcsConfigSnapshot.ClaimMetadataPolicy(48, 240),
                 new UcsConfigSnapshot.ClaimTeleportPolicy(3, true, true),
-                new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS),
+                new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", false),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),

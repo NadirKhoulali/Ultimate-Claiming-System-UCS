@@ -23,6 +23,10 @@ UCS v1 stores claim/domain data in Minecraft `SavedData` under the overworld dat
 
 Saved claims persist display name, description, and an optional exact spawn position. The spawn stores dimension/chunk plus x/y/z/yaw/pitch; `spawnChunk` is still exposed as a derived compatibility accessor for chunk-level checks.
 
+## Role Data
+
+Saved claims persist active `roleAssignments` and pending `pendingRoleInvites` as role-id to player-UUID sets. Pending invites are intentionally separate from assignments so protection checks only use accepted memberships.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.

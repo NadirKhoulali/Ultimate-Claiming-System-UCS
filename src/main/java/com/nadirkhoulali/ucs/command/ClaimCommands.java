@@ -15,15 +15,22 @@ import com.nadirkhoulali.ucs.claim.ClaimCreationResult;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataFailure;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataRequest;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataResult;
+import com.nadirkhoulali.ucs.claim.ClaimRoleFailure;
+import com.nadirkhoulali.ucs.claim.ClaimRoleRequest;
+import com.nadirkhoulali.ucs.claim.ClaimRoleResult;
+import com.nadirkhoulali.ucs.claim.ClaimRoleTarget;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportStartResult;
 import com.nadirkhoulali.ucs.config.UcsCommonConfig;
 import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
+import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.service.UcsServices;
 import com.nadirkhoulali.ucs.storage.ClaimRepository;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
@@ -50,6 +57,28 @@ public final class ClaimCommands {
                                 .executes(context -> describe(context, services, StringArgumentType.getString(context, "description")))))
                 .then(Commands.literal("setspawn").executes(context -> setSpawn(context, services)))
                 .then(Commands.literal("home").executes(context -> home(context, services)))
+                .then(Commands.literal("trust")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> trust(context, services, EntityArgument.getPlayer(context, "player")))))
+                .then(Commands.literal("untrust")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .executes(context -> untrust(context, services, EntityArgument.getPlayer(context, "player")))))
+                .then(Commands.literal("role")
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("role", StringArgumentType.word())
+                                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(
+                                                UcsCommonConfig.snapshot().roles().defaultRoleIds(),
+                                                builder
+                                        ))
+                                        .executes(context -> assignRole(
+                                                context,
+                                                services,
+                                                EntityArgument.getPlayer(context, "player"),
+                                                StringArgumentType.getString(context, "role")
+                                        )))))
+                .then(Commands.literal("invite")
+                        .then(Commands.literal("accept").executes(context -> acceptInvite(context, services)))
+                        .then(Commands.literal("decline").executes(context -> declineInvite(context, services))))
                 .then(Commands.argument("radius", IntegerArgumentType.integer(0))
                         .executes(context -> claim(context, services, IntegerArgumentType.getInteger(context, "radius")))));
     }
@@ -143,6 +172,94 @@ public final class ClaimCommands {
         }
 
         source.sendSuccess(() -> editSuccessMessage(result, request.chunk()), false);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int trust(CommandContext<CommandSourceStack> context, UcsServices services, ServerPlayer target) {
+        return updateRole(context, services, roleRequest -> services.claimRoles().trustPlayer(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest,
+                roleTarget(target)
+        ));
+    }
+
+    private static int untrust(CommandContext<CommandSourceStack> context, UcsServices services, ServerPlayer target) {
+        return updateRole(context, services, roleRequest -> services.claimRoles().removePlayer(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest,
+                roleTarget(target)
+        ));
+    }
+
+    private static int assignRole(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            ServerPlayer target,
+            String roleValue
+    ) {
+        RoleId role;
+        try {
+            role = new RoleId(roleValue);
+        } catch (IllegalArgumentException exception) {
+            context.getSource().sendFailure(Component.translatable("command.ucs.claim.roles.denied.role_not_configured", roleValue));
+            return 0;
+        }
+
+        return updateRole(context, services, roleRequest -> services.claimRoles().assignRole(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest,
+                roleTarget(target),
+                role
+        ));
+    }
+
+    private static int acceptInvite(CommandContext<CommandSourceStack> context, UcsServices services) {
+        return updateRole(context, services, roleRequest -> services.claimRoles().acceptInvite(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest
+        ));
+    }
+
+    private static int declineInvite(CommandContext<CommandSourceStack> context, UcsServices services) {
+        return updateRole(context, services, roleRequest -> services.claimRoles().declineInvite(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                UcsCommonConfig.snapshot(),
+                roleRequest
+        ));
+    }
+
+    private static int updateRole(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            RoleCommand command
+    ) {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayer();
+        if (player == null) {
+            source.sendFailure(Component.translatable("command.ucs.claim.player_only"));
+            return 0;
+        }
+        if (services.claimRepository().isEmpty() || services.claimService().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+
+        ClaimRoleResult result = command.execute(roleRequest(player));
+        if (result.failure().isPresent()) {
+            source.sendFailure(roleFailureMessage(result.failure().orElseThrow()));
+            return 0;
+        }
+
+        source.sendSuccess(() -> roleSuccessMessage(result), false);
         return Command.SINGLE_SUCCESS;
     }
 
@@ -309,6 +426,20 @@ public final class ClaimCommands {
         );
     }
 
+    private static ClaimRoleRequest roleRequest(ServerPlayer player) {
+        ChunkPos chunkPos = new ChunkPos(player.blockPosition());
+        return new ClaimRoleRequest(
+                player.getUUID(),
+                player.getGameProfile().getName(),
+                new ChunkKey(player.serverLevel().dimension().location().toString(), chunkPos.x, chunkPos.z),
+                Instant.now()
+        );
+    }
+
+    private static ClaimRoleTarget roleTarget(ServerPlayer player) {
+        return new ClaimRoleTarget(player.getUUID(), player.getGameProfile().getName());
+    }
+
     private static Component editSuccessMessage(ClaimChunkEditResult result, ChunkKey chunk) {
         return switch (result.action()) {
             case ADD -> Component.translatable(
@@ -380,8 +511,42 @@ public final class ClaimCommands {
         };
     }
 
+    private static Component roleSuccessMessage(ClaimRoleResult result) {
+        ClaimRoleTarget target = result.target().orElseThrow();
+        String role = result.role().orElseThrow().value();
+        return switch (result.action()) {
+            case TRUST -> result.pendingInvite()
+                    ? Component.translatable("command.ucs.claim.roles.invited", target.playerName(), role, result.claim().orElseThrow().displayName())
+                    : Component.translatable("command.ucs.claim.roles.trusted", target.playerName(), role, result.claim().orElseThrow().displayName());
+            case ASSIGN_ROLE -> result.pendingInvite()
+                    ? Component.translatable("command.ucs.claim.roles.invited", target.playerName(), role, result.claim().orElseThrow().displayName())
+                    : Component.translatable("command.ucs.claim.roles.assigned", target.playerName(), role, result.claim().orElseThrow().displayName());
+            case UNTRUST -> Component.translatable("command.ucs.claim.roles.untrusted", target.playerName(), result.claim().orElseThrow().displayName());
+            case ACCEPT_INVITE -> Component.translatable("command.ucs.claim.roles.accepted", role, result.claim().orElseThrow().displayName());
+            case DECLINE_INVITE -> Component.translatable("command.ucs.claim.roles.declined", role, result.claim().orElseThrow().displayName());
+        };
+    }
+
+    private static Component roleFailureMessage(ClaimRoleFailure failure) {
+        return switch (failure.reason()) {
+            case NO_CLAIM_AT_CHUNK -> Component.translatable("command.ucs.claim.edit.denied.no_claim", failure.detail());
+            case NOT_OWNER -> Component.translatable("command.ucs.claim.edit.denied.not_owner", failure.detail());
+            case TARGET_IS_SELF -> Component.translatable("command.ucs.claim.roles.denied.self", failure.detail());
+            case TARGET_IS_OWNER -> Component.translatable("command.ucs.claim.roles.denied.owner", failure.detail());
+            case ROLE_NOT_CONFIGURED -> Component.translatable("command.ucs.claim.roles.denied.role_not_configured", failure.detail());
+            case TARGET_BANNED -> Component.translatable("command.ucs.claim.roles.denied.banned", failure.detail());
+            case NO_PENDING_INVITE -> Component.translatable("command.ucs.claim.roles.denied.no_pending_invite", failure.detail());
+            case SAVE_FAILED -> Component.translatable("command.ucs.claim.denied.save_failed", failure.detail());
+        };
+    }
+
     @FunctionalInterface
     private interface MetadataCommand {
         ClaimMetadataResult execute(ClaimMetadataRequest request);
+    }
+
+    @FunctionalInterface
+    private interface RoleCommand {
+        ClaimRoleResult execute(ClaimRoleRequest request);
     }
 }

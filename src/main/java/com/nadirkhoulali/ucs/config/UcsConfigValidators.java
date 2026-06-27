@@ -113,8 +113,20 @@ public final class UcsConfigValidators {
             UcsConfigValidationReport.Builder report
     ) {
         validateSimpleList("roles.defaultRoleIds", roles.defaultRoleIds(), report);
+        if (!isSimpleKey(roles.defaultTrustRoleId())) {
+            report.error("roles.defaultTrustRoleId must be a lowercase simple key");
+        }
+        if (!isSimpleKey(roles.bannedRoleId())) {
+            report.error("roles.bannedRoleId must be a lowercase simple key");
+        }
         if (!roles.defaultRoleIds().contains("owner")) {
             report.error("roles.defaultRoleIds must include owner");
+        }
+        if (!roles.defaultRoleIds().contains(roles.defaultTrustRoleId())) {
+            report.error("roles.defaultRoleIds must include defaultTrustRoleId " + roles.defaultTrustRoleId());
+        }
+        if (!roles.defaultRoleIds().contains(roles.bannedRoleId())) {
+            report.error("roles.defaultRoleIds must include bannedRoleId " + roles.bannedRoleId());
         }
     }
 

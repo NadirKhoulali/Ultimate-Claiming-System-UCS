@@ -1,6 +1,9 @@
 package com.nadirkhoulali.ucs.config;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 public record UcsConfigSnapshot(
         int schemaVersion,
@@ -55,9 +58,19 @@ public record UcsConfigSnapshot(
     ) {
     }
 
-    public record RoleDefaults(List<String> defaultRoleIds) {
+    public record RoleDefaults(
+            List<String> defaultRoleIds,
+            String defaultTrustRoleId,
+            String bannedRoleId,
+            boolean requireInviteAcceptance
+    ) {
         public RoleDefaults {
-            defaultRoleIds = List.copyOf(defaultRoleIds);
+            defaultTrustRoleId = Objects.requireNonNull(defaultTrustRoleId, "defaultTrustRoleId").trim();
+            bannedRoleId = Objects.requireNonNull(bannedRoleId, "bannedRoleId").trim();
+            Set<String> mergedRoleIds = new LinkedHashSet<>(defaultRoleIds);
+            mergedRoleIds.add(defaultTrustRoleId);
+            mergedRoleIds.add(bannedRoleId);
+            defaultRoleIds = List.copyOf(mergedRoleIds);
         }
     }
 

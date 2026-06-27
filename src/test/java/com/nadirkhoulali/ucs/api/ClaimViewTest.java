@@ -18,5 +18,6 @@ class ClaimViewTest {
         assertThrows(UnsupportedOperationException.class, () -> view.chunks().add(new ChunkKey("minecraft:overworld", 5, 5)));
         assertThrows(UnsupportedOperationException.class, () -> view.flagOverrides().clear());
         assertThrows(UnsupportedOperationException.class, () -> view.roleAssignments().clear());
+        assertThrows(UnsupportedOperationException.class, () -> view.pendingRoleInvites().clear());
     }
 }

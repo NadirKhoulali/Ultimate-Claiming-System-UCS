@@ -28,6 +28,7 @@ public record ClaimView(
         Instant createdAt,
         Instant updatedAt,
         Map<RoleId, Set<UUID>> roleAssignments,
+        Map<RoleId, Set<UUID>> pendingRoleInvites,
         Set<FlagId> flagOverrides
 ) {
     public ClaimView {
@@ -36,6 +37,7 @@ public record ClaimView(
         spawnChunk = Objects.requireNonNull(spawnChunk, "spawnChunk");
         spawn = Objects.requireNonNull(spawn, "spawn");
         roleAssignments = copyRoleAssignments(roleAssignments);
+        pendingRoleInvites = copyRoleAssignments(pendingRoleInvites);
         flagOverrides = Set.copyOf(flagOverrides);
     }
 
@@ -51,6 +53,7 @@ public record ClaimView(
                 claim.metadata().createdAt(),
                 claim.metadata().updatedAt(),
                 claim.roleAssignments(),
+                claim.pendingRoleInvites(),
                 claim.flagOverrides()
         );
     }

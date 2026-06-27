@@ -28,6 +28,9 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.BooleanValue CLAIM_TELEPORT_REQUIRE_SAFE_LANDING;
 
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_ROLE_IDS;
+    public static final ModConfigSpec.ConfigValue<String> DEFAULT_TRUST_ROLE_ID;
+    public static final ModConfigSpec.ConfigValue<String> BANNED_ROLE_ID;
+    public static final ModConfigSpec.BooleanValue REQUIRE_INVITE_ACCEPTANCE;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_PROTECTION_FLAG_IDS;
 
     public static final ModConfigSpec.BooleanValue ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS;
@@ -120,6 +123,15 @@ public final class UcsCommonConfig {
         DEFAULT_ROLE_IDS = BUILDER
                 .comment("Default claim role ids. Role behavior is configured by later UCS slices.")
                 .defineListAllowEmpty("defaultRoleIds", UcsConfigDefaults.DEFAULT_ROLE_IDS, () -> "", UcsConfigValidators::isSimpleKey);
+        DEFAULT_TRUST_ROLE_ID = BUILDER
+                .comment("Role assigned by /claim trust when invite acceptance is not required.")
+                .define("defaultTrustRoleId", "member", UcsConfigValidators::isSimpleKey);
+        BANNED_ROLE_ID = BUILDER
+                .comment("Role used by UCS for banned claim players.")
+                .define("bannedRoleId", "banned", UcsConfigValidators::isSimpleKey);
+        REQUIRE_INVITE_ACCEPTANCE = BUILDER
+                .comment("When true, /claim trust and /claim role create pending invites that targets must accept.")
+                .define("requireInviteAcceptance", false);
         BUILDER.pop();
 
         BUILDER.push("flags");
@@ -234,7 +246,12 @@ public final class UcsCommonConfig {
                         CLAIM_TELEPORT_CANCEL_ON_MOVE.get(),
                         CLAIM_TELEPORT_REQUIRE_SAFE_LANDING.get()
                 ),
-                new UcsConfigSnapshot.RoleDefaults(List.copyOf(DEFAULT_ROLE_IDS.get())),
+                new UcsConfigSnapshot.RoleDefaults(
+                        List.copyOf(DEFAULT_ROLE_IDS.get()),
+                        DEFAULT_TRUST_ROLE_ID.get(),
+                        BANNED_ROLE_ID.get(),
+                        REQUIRE_INVITE_ACCEPTANCE.get()
+                ),
                 new UcsConfigSnapshot.FlagDefaults(List.copyOf(DEFAULT_PROTECTION_FLAG_IDS.get())),
                 new UcsConfigSnapshot.EconomyPolicy(
                         ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS.get(),

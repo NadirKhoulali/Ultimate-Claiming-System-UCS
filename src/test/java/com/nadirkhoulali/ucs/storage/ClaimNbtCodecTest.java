@@ -5,12 +5,15 @@ import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimMetadata;
 import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
+import com.nadirkhoulali.ucs.core.model.RoleId;
 import com.nadirkhoulali.ucs.core.model.ServerOwner;
 import com.nadirkhoulali.ucs.core.model.TeamOwner;
 import net.minecraft.nbt.CompoundTag;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,6 +54,26 @@ class ClaimNbtCodecTest {
 
         assertEquals("Starter area", decoded.metadata().description());
         assertEquals(spawn, decoded.metadata().spawn().orElseThrow());
+    }
+
+    @Test
+    void pendingRoleInvitesRoundTripThroughNbt() {
+        Claim claim = ClaimFixtures.claimAt(0, 0);
+        UUID invitee = UUID.randomUUID();
+        Claim updated = new Claim(
+                claim.id(),
+                claim.owner(),
+                claim.chunks(),
+                claim.metadata(),
+                claim.roleAssignments(),
+                Map.of(new RoleId("member"), Set.of(invitee)),
+                claim.flagOverrides()
+        );
+
+        CompoundTag tag = ClaimNbtCodec.encodeClaim(updated);
+        Claim decoded = ClaimNbtCodec.decodeClaim(tag);
+
+        assertEquals(Set.of(invitee), decoded.pendingRoleInvites().get(new RoleId("member")));
     }
 
     private static void assertOwnerRoundTrip(Claim claim) {

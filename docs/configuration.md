@@ -45,7 +45,11 @@ Safe landing requires the destination dimension to exist, the spawn chunk to sti
 
 ## Roles And Flags
 
-Default role ids are `owner`, `member`, `tenant`, and `visitor`. Role behavior is implemented in later slices, but the ids are validated now so storage/API code can rely on stable lowercase keys.
+Default role ids are `owner`, `member`, `tenant`, `visitor`, and `banned`.
+
+`roles.defaultTrustRoleId` defaults to `member`, `roles.bannedRoleId` defaults to `banned`, and `roles.requireInviteAcceptance` defaults to `false`. When invite acceptance is enabled, trust/role commands create pending invites until the target accepts.
+
+UCS automatically includes the configured trust and banned role ids in the effective role list, which keeps older config files valid after role policy keys are added.
 
 Default flag ids are namespaced with `ucs:`. Addons should also use namespaced ids.
 

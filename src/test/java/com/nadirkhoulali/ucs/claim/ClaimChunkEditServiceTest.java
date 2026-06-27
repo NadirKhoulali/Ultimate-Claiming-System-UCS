@@ -135,7 +135,7 @@ class ClaimChunkEditServiceTest {
                 ),
                 new UcsConfigSnapshot.ClaimMetadataPolicy(48, 240),
                 new UcsConfigSnapshot.ClaimTeleportPolicy(3, true, true),
-                new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS),
+                new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", false),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),

@@ -312,6 +312,7 @@ public final class ClaimChunkEditService {
                         updatedAt
                 ),
                 claim.roleAssignments(),
+                claim.pendingRoleInvites(),
                 claim.flagOverrides()
         );
     }
@@ -332,6 +333,7 @@ public final class ClaimChunkEditService {
                     ordered.get(index),
                     new ClaimMetadata(displayName, original.metadata().description(), Optional.empty(), original.metadata().createdAt(), updatedAt),
                     original.roleAssignments(),
+                    original.pendingRoleInvites(),
                     original.flagOverrides()
             ));
         }

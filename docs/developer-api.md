@@ -30,6 +30,8 @@ All v1 API methods are server-thread only unless a future method explicitly docu
 - `description`
 - `spawn`, an exact claim spawn position when one is set
 - `spawnChunk`, a compatibility convenience derived from `spawn`
+- `roleAssignments`, active claim-level role memberships
+- `pendingRoleInvites`, invite-only memberships that are not active yet
 
 ## Ownership
 
@@ -56,6 +58,12 @@ Use `OwnerRef.stableKey()` or `ClaimOwnership` helpers for comparisons. Do not a
 Mutation methods emit NeoForge events after repository commit.
 
 Built-in player commands update claim metadata through the same service path, so name, description, and spawn edits emit `UcsClaimEvent.Updated` after repository commit.
+
+## Roles
+
+Built-in player commands can trust, untrust, assign configured roles, and accept or decline pending invites. Active assignments and pending invites are persisted on the claim and exposed through `ClaimView`.
+
+`ClaimRoleResolver.effectiveRoles(...)` provides the first server-side role resolution helper for later protection, GUI, and marketplace systems. Banned roles take precedence over all other role assignments.
 
 ## Events
 

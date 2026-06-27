@@ -7,6 +7,7 @@ import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditService;
 import com.nadirkhoulali.ucs.claim.ClaimCreationService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
+import com.nadirkhoulali.ucs.claim.ClaimRoleService;
 import com.nadirkhoulali.ucs.claim.ClaimTeleportService;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
@@ -22,6 +23,7 @@ public final class UcsServices {
     private final ClaimCreationService claimCreationService = new ClaimCreationService();
     private final ClaimChunkEditService claimChunkEditService = new ClaimChunkEditService();
     private final ClaimMetadataService claimMetadataService = new ClaimMetadataService();
+    private final ClaimRoleService claimRoleService = new ClaimRoleService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private ClaimRepository claimRepository;
     private UcsClaimService claimService;
@@ -58,6 +60,10 @@ public final class UcsServices {
 
     public ClaimMetadataService claimMetadata() {
         return claimMetadataService;
+    }
+
+    public ClaimRoleService claimRoles() {
+        return claimRoleService;
     }
 
     public ClaimTeleportService claimTeleport() {

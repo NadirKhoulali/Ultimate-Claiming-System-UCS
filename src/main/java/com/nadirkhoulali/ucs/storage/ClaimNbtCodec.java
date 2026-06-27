@@ -39,6 +39,7 @@ final class ClaimNbtCodec {
         tag.put("chunks", encodeChunks(claim.chunks()));
         tag.put("metadata", encodeMetadata(claim.metadata()));
         tag.put("roleAssignments", encodeRoleAssignments(claim.roleAssignments()));
+        tag.put("pendingRoleInvites", encodeRoleAssignments(claim.pendingRoleInvites()));
         tag.put("flagOverrides", encodeFlags(claim.flagOverrides()));
         return tag;
     }
@@ -50,6 +51,7 @@ final class ClaimNbtCodec {
                 decodeChunks(tag.getList("chunks", Tag.TAG_COMPOUND)),
                 decodeMetadata(tag.getCompound("metadata")),
                 decodeRoleAssignments(tag.getList("roleAssignments", Tag.TAG_COMPOUND)),
+                decodeRoleAssignments(tag.getList("pendingRoleInvites", Tag.TAG_COMPOUND)),
                 decodeFlags(tag.getList("flagOverrides", Tag.TAG_STRING))
         );
     }

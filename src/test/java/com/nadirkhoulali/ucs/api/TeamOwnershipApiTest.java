@@ -44,6 +44,7 @@ class TeamOwnershipApiTest {
                         Instant.EPOCH.plusSeconds(1)
                 ),
                 claim.roleAssignments(),
+                claim.pendingRoleInvites(),
                 claim.flagOverrides()
         );
 

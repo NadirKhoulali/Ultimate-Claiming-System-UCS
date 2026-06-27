@@ -22,6 +22,10 @@ Team owner references are valid in storage and API in v1, but built-in team UI a
 
 A named claim-level permission group, such as owner, member, tenant, or visitor. Roles are configurable in later implementation slices, and v1 does not use inheritance.
 
+## Pending Role Invite
+
+A persisted invitation for a player to accept a claim role. Pending invites are not active role assignments until accepted and are used only when `roles.requireInviteAcceptance` is enabled.
+
 ## Flag
 
 A typed protection rule key, such as `ucs:block_break` or `ucs:container_open`. Addons should use namespaced flag ids.
