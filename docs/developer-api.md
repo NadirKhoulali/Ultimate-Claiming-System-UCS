@@ -90,7 +90,9 @@ Typed protection flag API lives under `com.nadirkhoulali.ucs.api.protection`.
 
 Claim `flagOverrides` are the persisted per-claim enabled flag set. Config `flags.defaultProtectionFlagIds` decides which flags new claims start with; saved claim flags remain readable even if a later config changes the defaults.
 
-`ClaimProtectionService` is the first server-side protection service. Block break and place NeoForge events route through it, then through `ProtectionFlagEvaluator`, then through `UcsProtectionDecisionEvent` before the event is cancelled. The service uses `UcsClaimService` lookups and `ClaimView` role data rather than reading the repository directly.
+`ClaimProtectionService` is the first server-side protection service. Block break/place, right-click block interaction, neighbor notify, and piston pre-move NeoForge events route through it, then through `ProtectionFlagEvaluator`, then through `UcsProtectionDecisionEvent` before the event is cancelled. The service uses `UcsClaimService` lookups and `ClaimView` role data rather than reading the repository directly.
+
+Interaction targets are classified by configurable exact block ids and `#tag` ids before a flag is evaluated. Containers, doors, buttons, levers, and redstone boundary sources intentionally use separate flags so addons and server configs can tune them independently.
 
 ## Archive Admin Commands
 

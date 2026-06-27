@@ -14,19 +14,26 @@ import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.RoleId;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 public final class ClaimProtectionService {
     public ProtectionDecision checkBlockBreak(
@@ -71,6 +78,77 @@ public final class ClaimProtectionService {
         return checkClaimAction(claimService, registry, config, level, position, UcsBuiltInProtectionFlags.BLOCK_PLACE, player);
     }
 
+    public ProtectionDecision checkBlockInteraction(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            BlockPos position,
+            BlockState state,
+            Player player
+    ) {
+        Optional<FlagId> flagId = interactionFlagForBlock(config, state);
+        if (flagId.isEmpty()) {
+            return ProtectionDecision.abstain(UcsBuiltInProtectionFlags.REDSTONE_USE, "unprotected_interaction_target", Set.of());
+        }
+        return checkClaimAction(claimService, registry, config, level, position, flagId.orElseThrow(), player);
+    }
+
+    public ProtectionDecision checkRedstoneInfluence(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            BlockPos sourcePosition,
+            BlockState sourceState,
+            Collection<BlockPos> affectedPositions,
+            boolean forceRedstoneUpdate
+    ) {
+        if (!forceRedstoneUpdate && !matchesConfiguredTarget(config.protection().redstoneTargetIds(), sourceState)) {
+            return ProtectionDecision.abstain(UcsBuiltInProtectionFlags.REDSTONE_USE, "non_redstone_source", Set.of());
+        }
+        return checkRedstoneBoundary(claimService, registry, config, level, sourcePosition, affectedPositions);
+    }
+
+    public ProtectionDecision checkRedstoneBoundary(
+            UcsClaimService claimService,
+            ProtectionFlagRegistry registry,
+            UcsConfigSnapshot config,
+            ServerLevel level,
+            BlockPos sourcePosition,
+            Collection<BlockPos> affectedPositions
+    ) {
+        Objects.requireNonNull(affectedPositions, "affectedPositions");
+        Optional<ClaimView> sourceClaim = claimService.findClaim(chunkAt(level, sourcePosition));
+        ProtectionDecision lastAllowed = null;
+        for (BlockPos affectedPosition : affectedPositions.stream().distinct().toList()) {
+            ChunkKey affectedChunk = chunkAt(level, affectedPosition);
+            Optional<ClaimView> affectedClaim = claimService.findClaim(affectedChunk);
+            if (affectedClaim.isEmpty() || sameClaim(sourceClaim, affectedClaim.orElseThrow())) {
+                continue;
+            }
+
+            ProtectionDecision decision = checkClaimAction(
+                    claimService,
+                    registry,
+                    config,
+                    level,
+                    affectedPosition,
+                    UcsBuiltInProtectionFlags.REDSTONE_USE,
+                    null
+            );
+            if (decision.denied()) {
+                return decision;
+            }
+            if (decision.allowed()) {
+                lastAllowed = decision;
+            }
+        }
+        return lastAllowed == null
+                ? ProtectionDecision.abstain(UcsBuiltInProtectionFlags.REDSTONE_USE, "no_protected_boundary", Set.of())
+                : lastAllowed;
+    }
+
     public ProtectionDecision evaluateClaimAction(
             ProtectionFlagRegistry registry,
             UcsConfigSnapshot config,
@@ -101,6 +179,23 @@ public final class ClaimProtectionService {
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(blockId, "blockId");
         return config.protection().allowedBlockIds().contains(blockId);
+    }
+
+    public Optional<FlagId> interactionFlagForBlock(UcsConfigSnapshot config, BlockState state) {
+        Objects.requireNonNull(state, "state");
+        String blockId = blockId(state);
+        return interactionFlagForTarget(config, blockId, tagId -> stateMatchesTag(state, tagId));
+    }
+
+    public Optional<FlagId> interactionFlagForBlockId(UcsConfigSnapshot config, String blockId) {
+        return interactionFlagForTarget(config, blockId, tagId -> false);
+    }
+
+    public boolean matchesConfiguredTarget(List<String> configuredTargets, BlockState state) {
+        Objects.requireNonNull(configuredTargets, "configuredTargets");
+        Objects.requireNonNull(state, "state");
+        String blockId = blockId(state);
+        return configuredTargets.stream().anyMatch(target -> matchesTarget(target, blockId, tagId -> stateMatchesTag(state, tagId)));
     }
 
     private ProtectionDecision checkClaimAction(
@@ -136,6 +231,52 @@ public final class ClaimProtectionService {
         return event.allowed()
                 ? ProtectionDecision.allow(flagId, event.reason(), decision.effectiveRoles())
                 : ProtectionDecision.deny(flagId, event.reason(), decision.effectiveRoles());
+    }
+
+    private Optional<FlagId> interactionFlagForTarget(
+            UcsConfigSnapshot config,
+            String blockId,
+            Predicate<String> tagMatcher
+    ) {
+        Objects.requireNonNull(config, "config");
+        Objects.requireNonNull(blockId, "blockId");
+        UcsConfigSnapshot.ProtectionPolicy protection = config.protection();
+        if (protection.containerTargetIds().stream().anyMatch(target -> matchesTarget(target, blockId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.CONTAINER_OPEN);
+        }
+        if (protection.doorTargetIds().stream().anyMatch(target -> matchesTarget(target, blockId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.DOOR_USE);
+        }
+        if (protection.buttonTargetIds().stream().anyMatch(target -> matchesTarget(target, blockId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.BUTTON_USE);
+        }
+        if (protection.leverTargetIds().stream().anyMatch(target -> matchesTarget(target, blockId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.LEVER_USE);
+        }
+        if (protection.redstoneTargetIds().stream().anyMatch(target -> matchesTarget(target, blockId, tagMatcher))) {
+            return Optional.of(UcsBuiltInProtectionFlags.REDSTONE_USE);
+        }
+        return Optional.empty();
+    }
+
+    private static boolean matchesTarget(String target, String blockId, Predicate<String> tagMatcher) {
+        if (target.startsWith("#")) {
+            return tagMatcher.test(target.substring(1));
+        }
+        return target.equals(blockId);
+    }
+
+    private static boolean stateMatchesTag(BlockState state, String tagId) {
+        try {
+            TagKey<Block> tagKey = TagKey.create(Registries.BLOCK, ResourceLocation.parse(tagId));
+            return state.is(tagKey);
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private static boolean sameClaim(Optional<ClaimView> sourceClaim, ClaimView targetClaim) {
+        return sourceClaim.map(ClaimView::id).filter(targetClaim.id()::equals).isPresent();
     }
 
     private static Set<RoleId> effectiveRoles(ClaimView claim, UUID playerId, UcsConfigSnapshot config) {

@@ -40,6 +40,11 @@ public final class UcsCommonConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> IGNORED_BLOCK_IDS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> ALLOWED_BLOCK_IDS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> SPECIAL_BLOCK_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> CONTAINER_TARGET_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> DOOR_TARGET_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> BUTTON_TARGET_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> LEVER_TARGET_IDS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> REDSTONE_TARGET_IDS;
 
     public static final ModConfigSpec.BooleanValue ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS;
     public static final ModConfigSpec.DoubleValue STARTER_CLAIM_PRICE;
@@ -172,6 +177,21 @@ public final class UcsCommonConfig {
         SPECIAL_BLOCK_IDS = BUILDER
                 .comment("Block ids that use the stricter ucs:special_block_use flag for break protection.")
                 .defineListAllowEmpty("specialBlockIds", UcsConfigDefaults.DEFAULT_SPECIAL_BLOCK_IDS, () -> "", UcsConfigValidators::isResourceId);
+        CONTAINER_TARGET_IDS = BUILDER
+                .comment("Block ids or #tag ids that use the ucs:container_open flag when right-clicked.")
+                .defineListAllowEmpty("containerTargetIds", UcsConfigDefaults.DEFAULT_CONTAINER_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
+        DOOR_TARGET_IDS = BUILDER
+                .comment("Block ids or #tag ids that use the ucs:door_use flag when right-clicked.")
+                .defineListAllowEmpty("doorTargetIds", UcsConfigDefaults.DEFAULT_DOOR_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
+        BUTTON_TARGET_IDS = BUILDER
+                .comment("Block ids or #tag ids that use the ucs:button_use flag when right-clicked or redstone-updated.")
+                .defineListAllowEmpty("buttonTargetIds", UcsConfigDefaults.DEFAULT_BUTTON_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
+        LEVER_TARGET_IDS = BUILDER
+                .comment("Block ids or #tag ids that use the ucs:lever_use flag when right-clicked.")
+                .defineListAllowEmpty("leverTargetIds", UcsConfigDefaults.DEFAULT_LEVER_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
+        REDSTONE_TARGET_IDS = BUILDER
+                .comment("Block ids or #tag ids treated as redstone boundary sources for ucs:redstone_use.")
+                .defineListAllowEmpty("redstoneTargetIds", UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS, () -> "", UcsConfigValidators::isRegistryOrTagReference);
         BUILDER.pop();
 
         BUILDER.push("economy");
@@ -301,7 +321,12 @@ public final class UcsCommonConfig {
                 new UcsConfigSnapshot.ProtectionPolicy(
                         List.copyOf(IGNORED_BLOCK_IDS.get()),
                         List.copyOf(ALLOWED_BLOCK_IDS.get()),
-                        List.copyOf(SPECIAL_BLOCK_IDS.get())
+                        List.copyOf(SPECIAL_BLOCK_IDS.get()),
+                        List.copyOf(CONTAINER_TARGET_IDS.get()),
+                        List.copyOf(DOOR_TARGET_IDS.get()),
+                        List.copyOf(BUTTON_TARGET_IDS.get()),
+                        List.copyOf(LEVER_TARGET_IDS.get()),
+                        List.copyOf(REDSTONE_TARGET_IDS.get())
                 ),
                 new UcsConfigSnapshot.EconomyPolicy(
                         ENABLE_ECONOMY_WHEN_PROVIDER_EXISTS.get(),

@@ -239,6 +239,79 @@ class UcsConfigValidatorsTest {
     }
 
     @Test
+    void acceptsRegistryIdsAndTagIdsForInteractionTargets() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
+                base.roles(),
+                base.bans(),
+                base.flags(),
+                new UcsConfigSnapshot.ProtectionPolicy(
+                        List.of(),
+                        List.of(),
+                        List.of("minecraft:beacon"),
+                        List.of("#minecraft:shulker_boxes", "modded:machine"),
+                        List.of("#minecraft:doors"),
+                        List.of("#minecraft:buttons"),
+                        List.of("minecraft:lever"),
+                        List.of("modded:redstone_bus")
+                ),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                base.archive(),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        assertTrue(snapshot.validate().valid());
+    }
+
+    @Test
+    void rejectsInvalidInteractionTargetReferences() {
+        UcsConfigSnapshot base = validSnapshot();
+        UcsConfigSnapshot snapshot = new UcsConfigSnapshot(
+                base.schemaVersion(),
+                base.logStartupSummary(),
+                base.dimensions(),
+                base.claimLimits(),
+                base.claimMetadata(),
+                base.claimTeleport(),
+                base.roles(),
+                base.bans(),
+                base.flags(),
+                new UcsConfigSnapshot.ProtectionPolicy(
+                        List.of(),
+                        List.of(),
+                        List.of("minecraft:beacon"),
+                        List.of("#bad tag"),
+                        base.protection().doorTargetIds(),
+                        base.protection().buttonTargetIds(),
+                        base.protection().leverTargetIds(),
+                        base.protection().redstoneTargetIds()
+                ),
+                base.economy(),
+                base.mapCache(),
+                base.audit(),
+                base.archive(),
+                base.inactivePurge(),
+                base.commands(),
+                base.messages()
+        );
+
+        UcsConfigValidationReport report = snapshot.validate();
+
+        assertFalse(report.valid());
+        assertTrue(report.errors().stream().anyMatch(error -> error.contains("protection.containerTargetIds")));
+    }
+
+    @Test
     void snapshotDefensivelyCopiesLists() {
         ArrayList<String> enabled = new ArrayList<>(List.of("minecraft:overworld"));
         UcsConfigSnapshot snapshot = withDimensions(enabled, List.of());

@@ -8,16 +8,23 @@ import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.config.UcsConfigValidationReport;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.service.UcsServices;
+import net.minecraft.core.BlockPos;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.PistonEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.server.permission.events.PermissionGatherEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class UcsServerLifecycle {
     private final UcsServices services;
@@ -124,10 +131,95 @@ public final class UcsServerLifecycle {
         }
     }
 
+    @SubscribeEvent
+    public void onBlockInteraction(PlayerInteractEvent.RightClickBlock event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkBlockInteraction(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                level.getBlockState(event.getPos()),
+                event.getEntity()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.FAIL);
+            sendProtectionDenial(event.getEntity(), config, decision.flagId().value(), decision.reason());
+        }
+    }
+
+    @SubscribeEvent
+    public void onNeighborNotify(BlockEvent.NeighborNotifyEvent event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        List<BlockPos> affectedPositions = event.getNotifiedSides().stream()
+                .map(side -> event.getPos().relative(side))
+                .toList();
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkRedstoneInfluence(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                event.getState(),
+                affectedPositions,
+                event.getForceRedstoneUpdate()
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public void onPistonPre(PistonEvent.Pre event) {
+        if (!(event.getLevel() instanceof ServerLevel level) || services.claimService().isEmpty()) {
+            return;
+        }
+        List<BlockPos> affectedPositions = pistonAffectedPositions(event);
+        if (affectedPositions.isEmpty()) {
+            return;
+        }
+        UcsConfigSnapshot config = UcsCommonConfig.snapshot();
+        var decision = services.claimProtection().checkRedstoneInfluence(
+                services.claimService().orElseThrow(),
+                services.protectionFlags(),
+                config,
+                level,
+                event.getPos(),
+                event.getState(),
+                affectedPositions,
+                true
+        );
+        if (decision.denied()) {
+            event.setCanceled(true);
+        }
+    }
+
     private static void sendProtectionDenial(Player player, UcsConfigSnapshot config, String flagId, String reason) {
         player.displayClientMessage(
                 Component.translatable("command.ucs.protection.denied", flagId, reason),
                 config.messages().sendActionBarDenials()
         );
+    }
+
+    private static List<BlockPos> pistonAffectedPositions(PistonEvent.Pre event) {
+        List<BlockPos> affectedPositions = new ArrayList<>();
+        affectedPositions.add(event.getFaceOffsetPos());
+        var structure = event.getStructureHelper();
+        if (structure != null && structure.resolve()) {
+            for (BlockPos pushedPosition : structure.getToPush()) {
+                affectedPositions.add(pushedPosition);
+                affectedPositions.add(pushedPosition.relative(event.getDirection()));
+            }
+            affectedPositions.addAll(structure.getToDestroy());
+        }
+        return affectedPositions;
     }
 }

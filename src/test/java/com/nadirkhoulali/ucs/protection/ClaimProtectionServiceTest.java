@@ -77,6 +77,27 @@ class ClaimProtectionServiceTest {
         assertFalse(service.isIgnoredBlock(config, "minecraft:stone"));
     }
 
+    @Test
+    void classifiesInteractionTargetsByRegistryId() {
+        UcsConfigSnapshot config = config(
+                List.of(),
+                List.of(),
+                List.of("minecraft:beacon"),
+                List.of("modded:machine"),
+                List.of("modded:door"),
+                List.of("modded:button"),
+                List.of("modded:lever"),
+                List.of("modded:redstone_bus")
+        );
+
+        assertEquals(UcsBuiltInProtectionFlags.CONTAINER_OPEN, service.interactionFlagForBlockId(config, "modded:machine").orElseThrow());
+        assertEquals(UcsBuiltInProtectionFlags.DOOR_USE, service.interactionFlagForBlockId(config, "modded:door").orElseThrow());
+        assertEquals(UcsBuiltInProtectionFlags.BUTTON_USE, service.interactionFlagForBlockId(config, "modded:button").orElseThrow());
+        assertEquals(UcsBuiltInProtectionFlags.LEVER_USE, service.interactionFlagForBlockId(config, "modded:lever").orElseThrow());
+        assertEquals(UcsBuiltInProtectionFlags.REDSTONE_USE, service.interactionFlagForBlockId(config, "modded:redstone_bus").orElseThrow());
+        assertTrue(service.interactionFlagForBlockId(config, "minecraft:dirt").isEmpty());
+    }
+
     private static Claim claimWithFlags(UUID owner, Set<FlagId> flags) {
         Claim claim = ClaimFixtures.claimAt(0, 0, ClaimOwnership.player(owner, "Owner"));
         return new Claim(
@@ -91,6 +112,28 @@ class ClaimProtectionServiceTest {
     }
 
     private static UcsConfigSnapshot config(List<String> ignoredBlocks, List<String> allowedBlocks, List<String> specialBlocks) {
+        return config(
+                ignoredBlocks,
+                allowedBlocks,
+                specialBlocks,
+                UcsConfigDefaults.DEFAULT_CONTAINER_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_DOOR_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_BUTTON_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_LEVER_TARGET_IDS,
+                UcsConfigDefaults.DEFAULT_REDSTONE_TARGET_IDS
+        );
+    }
+
+    private static UcsConfigSnapshot config(
+            List<String> ignoredBlocks,
+            List<String> allowedBlocks,
+            List<String> specialBlocks,
+            List<String> containerTargets,
+            List<String> doorTargets,
+            List<String> buttonTargets,
+            List<String> leverTargets,
+            List<String> redstoneTargets
+    ) {
         return new UcsConfigSnapshot(
                 UcsConfigDefaults.CURRENT_SCHEMA_VERSION,
                 true,
@@ -105,7 +148,16 @@ class ClaimProtectionServiceTest {
                 new UcsConfigSnapshot.RoleDefaults(UcsConfigDefaults.DEFAULT_ROLE_IDS, "member", "banned", false),
                 new UcsConfigSnapshot.BanPolicy(true, 48, 40),
                 new UcsConfigSnapshot.FlagDefaults(UcsConfigDefaults.DEFAULT_PROTECTION_FLAG_IDS),
-                new UcsConfigSnapshot.ProtectionPolicy(ignoredBlocks, allowedBlocks, specialBlocks),
+                new UcsConfigSnapshot.ProtectionPolicy(
+                        ignoredBlocks,
+                        allowedBlocks,
+                        specialBlocks,
+                        containerTargets,
+                        doorTargets,
+                        buttonTargets,
+                        leverTargets,
+                        redstoneTargets
+                ),
                 new UcsConfigSnapshot.EconomyPolicy(true, 25.0D, 5.0D, 0.75D, true),
                 new UcsConfigSnapshot.MapCachePolicy(1024, 30, 64, 512),
                 new UcsConfigSnapshot.AuditPolicy(true, 250, 180),

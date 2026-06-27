@@ -19,6 +19,15 @@ public final class UcsConfigValidators {
         return value instanceof String text && RESOURCE_ID.matcher(text).matches();
     }
 
+    public static boolean isRegistryOrTagReference(Object value) {
+        if (!(value instanceof String text) || text.isBlank()) {
+            return false;
+        }
+        return text.startsWith("#")
+                ? RESOURCE_ID.matcher(text.substring(1)).matches()
+                : RESOURCE_ID.matcher(text).matches();
+    }
+
     public static boolean isSimpleKey(Object value) {
         return value instanceof String text && SIMPLE_KEY.matcher(text).matches();
     }
@@ -158,6 +167,11 @@ public final class UcsConfigValidators {
         validateResourceList("protection.ignoredBlockIds", protection.ignoredBlockIds(), report);
         validateResourceList("protection.allowedBlockIds", protection.allowedBlockIds(), report);
         validateResourceList("protection.specialBlockIds", protection.specialBlockIds(), report);
+        validateRegistryReferenceList("protection.containerTargetIds", protection.containerTargetIds(), report);
+        validateRegistryReferenceList("protection.doorTargetIds", protection.doorTargetIds(), report);
+        validateRegistryReferenceList("protection.buttonTargetIds", protection.buttonTargetIds(), report);
+        validateRegistryReferenceList("protection.leverTargetIds", protection.leverTargetIds(), report);
+        validateRegistryReferenceList("protection.redstoneTargetIds", protection.redstoneTargetIds(), report);
         for (String ignored : protection.ignoredBlockIds()) {
             if (protection.specialBlockIds().contains(ignored)) {
                 report.warning("Block " + ignored + " is both ignored and special; ignored takes precedence");
@@ -248,6 +262,22 @@ public final class UcsConfigValidators {
         for (String value : values) {
             if (!isResourceId(value)) {
                 report.error(fieldName + " contains invalid resource id: " + value);
+            }
+            if (!seen.add(value)) {
+                report.error(fieldName + " contains duplicate value: " + value);
+            }
+        }
+    }
+
+    private static void validateRegistryReferenceList(
+            String fieldName,
+            List<String> values,
+            UcsConfigValidationReport.Builder report
+    ) {
+        Set<String> seen = new HashSet<>();
+        for (String value : values) {
+            if (!isRegistryOrTagReference(value)) {
+                report.error(fieldName + " contains invalid resource id or #tag id: " + value);
             }
             if (!seen.add(value)) {
                 report.error(fieldName + " contains duplicate value: " + value);
