@@ -8,6 +8,9 @@ import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerStatus;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditAction;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditStatus;
 import com.nadirkhoulali.ucs.core.model.LeaseContract;
 import com.nadirkhoulali.ucs.core.model.PlayerOwner;
 import com.nadirkhoulali.ucs.core.model.RoleId;
@@ -169,6 +172,28 @@ class ClaimNbtCodecTest {
 
         assertEquals(state, ClaimNbtCodec.decodeTaxState(ClaimNbtCodec.encodeTaxState(state)));
         assertEquals(entry, ClaimNbtCodec.decodeTaxLedgerEntry(ClaimNbtCodec.encodeTaxLedgerEntry(entry)));
+    }
+
+    @Test
+    void economyAuditEntryRoundTripsThroughNbt() {
+        Claim claim = ClaimFixtures.claimAt(0, 0);
+        EconomyAuditEntry entry = new EconomyAuditEntry(
+                UUID.randomUUID(),
+                Instant.EPOCH.plusSeconds(50),
+                "player:" + UUID.randomUUID(),
+                EconomyAuditAction.ADMIN_REFUND,
+                EconomyAuditStatus.SUCCESS,
+                Optional.of(claim.id()),
+                claim.owner().stableKey(),
+                BigDecimal.valueOf(12.5D),
+                "UCS_ADMIN_REFUND:test",
+                "fake:economy",
+                "provider-ref",
+                "manual correction",
+                "refunded $12.5"
+        );
+
+        assertEquals(entry, ClaimNbtCodec.decodeEconomyAuditEntry(ClaimNbtCodec.encodeEconomyAuditEntry(entry)));
     }
 
     private static void assertOwnerRoundTrip(Claim claim) {

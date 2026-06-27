@@ -153,6 +153,8 @@ Recurring claim tax is handled by `ClaimTaxService`. It lazily initializes `Clai
 
 Nonpayment is handled by `ClaimNonpaymentService`. It scans delinquent `ClaimTaxState` records in bounded batches, warns online player owners at the configured cadence, archives still-unpaid active claims after grace through `UcsClaimService.archiveClaim(...)`, and preserves the tax state as the debt record. Restore commands may block on debt depending on `nonpayment.requireDebtPaidBeforeRestore`; otherwise restored debt is deferred to the configured retry interval.
 
+Economy admin controls are handled by `ClaimEconomyAdminService`. It provides provider/price/tax/market previews, persisted economy audit queries, staff refunds, claim tax retry, sale cancellation, lease cancellation, and debt-clear audit recording. Corrective operations use stable references such as `UCS_ADMIN_REFUND:<subject>:<millis>` and `UCS_ADMIN_TAX_RETRY:<claimId>:<millis>`.
+
 ## Archive Admin Commands
 
 `/ucs archive list` shows recent archived claims, and `/ucs archive restore <archiveId>` restores an archive after validation. Both require the `ucs.archive.restore` NeoForge permission node.
@@ -160,6 +162,8 @@ Nonpayment is handled by `ClaimNonpaymentService`. It scans delinquent `ClaimTax
 `/ucs tax preview [limit]` shows upcoming claim tax charges and requires `ucs.economy.admin`.
 
 `/ucs debt list [limit]` and `/ucs debt clear <claimId>` inspect and clear recorded UCS debt and require `ucs.economy.admin`.
+
+`/ucs economy preview [limit]`, `/ucs economy audit [limit]`, `/ucs economy audit claim <claimId> [limit]`, `/ucs economy audit owner <ownerKey> [limit]`, `/ucs economy refund <player> <amount> <reason>`, `/ucs economy retry tax <claimId>`, `/ucs economy cancel sale <claimId> <reason>`, and `/ucs economy cancel lease <leaseId> <reason>` require `ucs.economy.admin`.
 
 ## Events
 

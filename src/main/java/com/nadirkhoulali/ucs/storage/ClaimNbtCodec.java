@@ -12,6 +12,9 @@ import com.nadirkhoulali.ucs.core.model.ClaimSpawn;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerStatus;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditAction;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditStatus;
 import com.nadirkhoulali.ucs.core.model.FlagId;
 import com.nadirkhoulali.ucs.core.model.LeaseContract;
 import com.nadirkhoulali.ucs.core.model.LeaseId;
@@ -153,6 +156,45 @@ final class ClaimNbtCodec {
                 tag.getString("reference"),
                 ClaimTaxLedgerStatus.valueOf(tag.getString("status")),
                 tag.getString("providerReference"),
+                tag.getString("detail")
+        );
+    }
+
+    static CompoundTag encodeEconomyAuditEntry(EconomyAuditEntry entry) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("id", entry.id().toString());
+        tag.putLong("occurredAt", entry.occurredAt().toEpochMilli());
+        tag.putString("actorKey", entry.actorKey());
+        tag.putString("action", entry.action().name());
+        tag.putString("status", entry.status().name());
+        entry.claimId().ifPresent(claimId -> tag.putString("claimId", claimId.value().toString()));
+        tag.putString("ownerKey", entry.ownerKey());
+        tag.putString("amount", entry.amount().toPlainString());
+        tag.putString("reference", entry.reference());
+        tag.putString("providerId", entry.providerId());
+        tag.putString("providerReference", entry.providerReference());
+        tag.putString("reason", entry.reason());
+        tag.putString("detail", entry.detail());
+        return tag;
+    }
+
+    static EconomyAuditEntry decodeEconomyAuditEntry(CompoundTag tag) {
+        Optional<ClaimId> claimId = tag.contains("claimId", Tag.TAG_STRING)
+                ? Optional.of(new ClaimId(UUID.fromString(tag.getString("claimId"))))
+                : Optional.empty();
+        return new EconomyAuditEntry(
+                UUID.fromString(tag.getString("id")),
+                Instant.ofEpochMilli(tag.getLong("occurredAt")),
+                tag.getString("actorKey"),
+                EconomyAuditAction.valueOf(tag.getString("action")),
+                EconomyAuditStatus.valueOf(tag.getString("status")),
+                claimId,
+                tag.getString("ownerKey"),
+                new BigDecimal(tag.getString("amount")),
+                tag.getString("reference"),
+                tag.getString("providerId"),
+                tag.getString("providerReference"),
+                tag.getString("reason"),
                 tag.getString("detail")
         );
     }

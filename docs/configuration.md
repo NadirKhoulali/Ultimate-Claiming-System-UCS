@@ -106,6 +106,10 @@ Claim purchases use `UCS_CLAIM_SALE_PURCHASE`. If ownership transfer fails after
 
 Lease acceptance uses `UCS_LEASE_ACCEPT`; renewal uses `UCS_LEASE_RENEW`. If a claim save fails after tenant payment, UCS attempts `UCS_LEASE_ACCEPT_ROLLBACK` or `UCS_LEASE_RENEW_ROLLBACK`.
 
+Economy admins can run `/ucs economy preview [limit]` to inspect active provider status, configured prices, marketplace counts, tax settings, and upcoming tax charges. Corrective commands include `/ucs economy refund <player> <amount> <reason>`, `/ucs economy retry tax <claimId>`, `/ucs economy cancel sale <claimId> <reason>`, and `/ucs economy cancel lease <leaseId> <reason>`. Each corrective command writes a persisted economy audit entry with a UCS reference and human reason.
+
+Economy audit inspection is staff-only through `/ucs economy audit`, `/ucs economy audit claim <claimId>`, and `/ucs economy audit owner <ownerKey>`. Provider transaction references are included there for diagnostics and are not exposed through ordinary player command messages.
+
 ## Claim Tax
 
 Recurring claim tax is configured separately from claim creation prices and is disabled by default:

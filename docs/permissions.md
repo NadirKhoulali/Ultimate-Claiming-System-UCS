@@ -9,7 +9,7 @@ The default `commands.permissionNodePrefix` is `ucs`, so the default nodes are:
 - `ucs.admin` - administrative UCS commands.
 - `ucs.bypass` - claim protection bypass.
 - `ucs.map.view` - access to claim map overlays and map data.
-- `ucs.economy.admin` - economy administration, including claim tax preview.
+- `ucs.economy.admin` - economy administration, including claim tax preview, debt clear, staff refunds, tax retry, marketplace cancellation, and economy audit inspection.
 - `ucs.archive.restore` - restoring archived claims.
 - `ucs.debug` - debugging and inspection tools.
 

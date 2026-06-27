@@ -4,11 +4,17 @@ import com.nadirkhoulali.ucs.core.model.ArchiveId;
 import com.nadirkhoulali.ucs.core.model.ChunkKey;
 import com.nadirkhoulali.ucs.core.model.Claim;
 import com.nadirkhoulali.ucs.core.model.ClaimArchive;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditAction;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditStatus;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -84,6 +90,33 @@ class UcsClaimsSavedDataTest {
 
         assertEquals(claim, repository.restore(archiveId).orElseThrow());
         assertEquals(claim, repository.findByChunk(new ChunkKey("minecraft:overworld", 2, 2)).orElseThrow());
+    }
+
+    @Test
+    void savedDataRoundTripsEconomyAuditEntries() {
+        Claim claim = ClaimFixtures.claimAt(3, 3);
+        EconomyAuditEntry entry = new EconomyAuditEntry(
+                UUID.randomUUID(),
+                Instant.EPOCH,
+                "player:admin",
+                EconomyAuditAction.TAX_RETRY,
+                EconomyAuditStatus.SUCCESS,
+                Optional.of(claim.id()),
+                claim.owner().stableKey(),
+                BigDecimal.valueOf(15),
+                "UCS_ADMIN_TAX_RETRY:test",
+                "fake:economy",
+                "provider-ref",
+                "retry tax",
+                "admin retry charged $15"
+        );
+        UcsClaimsSavedData data = new UcsClaimsSavedData();
+        data.putClaim(claim);
+        data.appendEconomyAuditEntry(entry);
+
+        UcsClaimsSavedData loaded = UcsClaimsSavedData.load(data.save(new CompoundTag(), null), null);
+
+        assertEquals(entry, loaded.economyAuditEntries().iterator().next());
     }
 
     @Test

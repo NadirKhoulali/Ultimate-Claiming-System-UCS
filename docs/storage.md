@@ -41,6 +41,8 @@ Claim tax state and server sink ledger entries are stored as top-level SavedData
 
 Nonpayment archiving preserves tax state after the active claim is archived, so admins can inspect debt and restore policy can decide whether unpaid debt blocks recovery. Clearing debt resets missed payments, delinquency, warning timestamp, and outstanding debt while scheduling the next regular tax due date.
 
+Economy audit entries are stored as a top-level SavedData collection. They capture staff corrective actions with actor key, action/status, optional claim id, owner key, amount, UCS reference, provider id, provider reference, reason, and diagnostic detail. These entries are intended for admin commands and future admin-console screens, not ordinary player messages.
+
 ## Spatial Index
 
 `ClaimSpatialIndex` maps `ChunkKey` to `ClaimId` so protection checks can resolve a chunk without scanning every claim.

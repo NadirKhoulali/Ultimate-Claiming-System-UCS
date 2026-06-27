@@ -2,16 +2,22 @@ package com.nadirkhoulali.ucs.command;
 
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.nadirkhoulali.ucs.api.ClaimArchiveView;
 import com.nadirkhoulali.ucs.UcsMod;
+import com.nadirkhoulali.ucs.claim.ClaimEconomyAdminResult;
+import com.nadirkhoulali.ucs.claim.ClaimEconomyPreview;
 import com.nadirkhoulali.ucs.claim.ClaimTaxPreview;
 import com.nadirkhoulali.ucs.config.UcsConfigSnapshot;
 import com.nadirkhoulali.ucs.core.model.ArchiveId;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
+import com.nadirkhoulali.ucs.core.model.LeaseId;
+import com.nadirkhoulali.ucs.core.model.LeaseStatus;
 import com.nadirkhoulali.ucs.permission.UcsPermission;
 import com.nadirkhoulali.ucs.permission.UcsPermissionNodes;
 import com.nadirkhoulali.ucs.permission.UcsPermissionService;
@@ -20,13 +26,16 @@ import com.nadirkhoulali.ucs.storage.ClaimRepositoryException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.fml.ModList;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Comparator;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -91,6 +100,132 @@ public final class UcsCommands {
                                                 services,
                                                 StringArgumentType.getString(context, "claimId")
                                         )))))
+                .then(Commands.literal("economy")
+                        .then(Commands.literal("preview")
+                                .executes(context -> previewEconomy(context, services, 5))
+                                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 100))
+                                        .executes(context -> previewEconomy(
+                                                context,
+                                                services,
+                                                IntegerArgumentType.getInteger(context, "limit")
+                                        ))))
+                        .then(Commands.literal("audit")
+                                .executes(context -> listEconomyAudit(context, services, 10))
+                                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 100))
+                                        .executes(context -> listEconomyAudit(
+                                                context,
+                                                services,
+                                                IntegerArgumentType.getInteger(context, "limit")
+                                        )))
+                                .then(Commands.literal("claim")
+                                        .then(Commands.argument("claimId", StringArgumentType.word())
+                                                .suggests((context, builder) -> services.claimRepository()
+                                                        .map(repository -> SharedSuggestionProvider.suggest(
+                                                                repository.economyAuditEntries().stream()
+                                                                        .map(EconomyAuditEntry::claimId)
+                                                                        .flatMap(Optional::stream)
+                                                                        .map(claimId -> claimId.value().toString()),
+                                                                builder
+                                                        ))
+                                                        .orElse(builder.buildFuture()))
+                                                .executes(context -> listEconomyAuditForClaim(
+                                                        context,
+                                                        services,
+                                                        StringArgumentType.getString(context, "claimId"),
+                                                        10
+                                                ))
+                                                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 100))
+                                                        .executes(context -> listEconomyAuditForClaim(
+                                                                context,
+                                                                services,
+                                                                StringArgumentType.getString(context, "claimId"),
+                                                                IntegerArgumentType.getInteger(context, "limit")
+                                                        )))))
+                                .then(Commands.literal("owner")
+                                        .then(Commands.argument("ownerKey", StringArgumentType.word())
+                                                .suggests((context, builder) -> services.claimRepository()
+                                                        .map(repository -> SharedSuggestionProvider.suggest(
+                                                                repository.economyAuditEntries().stream()
+                                                                        .map(EconomyAuditEntry::ownerKey),
+                                                                builder
+                                                        ))
+                                                        .orElse(builder.buildFuture()))
+                                                .executes(context -> listEconomyAuditForOwner(
+                                                        context,
+                                                        services,
+                                                        StringArgumentType.getString(context, "ownerKey"),
+                                                        10
+                                                ))
+                                                .then(Commands.argument("limit", IntegerArgumentType.integer(1, 100))
+                                                        .executes(context -> listEconomyAuditForOwner(
+                                                                context,
+                                                                services,
+                                                                StringArgumentType.getString(context, "ownerKey"),
+                                                                IntegerArgumentType.getInteger(context, "limit")
+                                                        ))))))
+                        .then(Commands.literal("refund")
+                                .then(Commands.argument("player", EntityArgument.player())
+                                        .then(Commands.argument("amount", DoubleArgumentType.doubleArg(0.01D))
+                                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                                        .executes(context -> refundPlayer(
+                                                                context,
+                                                                services,
+                                                                EntityArgument.getPlayer(context, "player"),
+                                                                BigDecimal.valueOf(DoubleArgumentType.getDouble(context, "amount")),
+                                                                StringArgumentType.getString(context, "reason")
+                                                        ))))))
+                        .then(Commands.literal("retry")
+                                .then(Commands.literal("tax")
+                                        .then(Commands.argument("claimId", StringArgumentType.word())
+                                                .suggests((context, builder) -> services.claimRepository()
+                                                        .map(repository -> SharedSuggestionProvider.suggest(
+                                                                repository.taxStates().stream()
+                                                                        .filter(UcsCommands::hasDebt)
+                                                                        .map(state -> state.claimId().value().toString()),
+                                                                builder
+                                                        ))
+                                                        .orElse(builder.buildFuture()))
+                                                .executes(context -> retryTax(
+                                                        context,
+                                                        services,
+                                                        StringArgumentType.getString(context, "claimId")
+                                                )))))
+                        .then(Commands.literal("cancel")
+                                .then(Commands.literal("sale")
+                                        .then(Commands.argument("claimId", StringArgumentType.word())
+                                                .suggests((context, builder) -> services.claimRepository()
+                                                        .map(repository -> SharedSuggestionProvider.suggest(
+                                                                repository.claims().stream()
+                                                                        .filter(claim -> claim.saleListing().isPresent())
+                                                                        .map(claim -> claim.id().value().toString()),
+                                                                builder
+                                                        ))
+                                                        .orElse(builder.buildFuture()))
+                                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                                        .executes(context -> cancelSale(
+                                                                context,
+                                                                services,
+                                                                StringArgumentType.getString(context, "claimId"),
+                                                                StringArgumentType.getString(context, "reason")
+                                                        )))))
+                                .then(Commands.literal("lease")
+                                        .then(Commands.argument("leaseId", StringArgumentType.word())
+                                                .suggests((context, builder) -> services.claimRepository()
+                                                        .map(repository -> SharedSuggestionProvider.suggest(
+                                                                repository.claims().stream()
+                                                                        .flatMap(claim -> claim.leases().values().stream())
+                                                                        .filter(lease -> lease.status() == LeaseStatus.OFFERED || lease.status() == LeaseStatus.ACTIVE)
+                                                                        .map(lease -> lease.id().value().toString()),
+                                                                builder
+                                                        ))
+                                                        .orElse(builder.buildFuture()))
+                                                .then(Commands.argument("reason", StringArgumentType.greedyString())
+                                                        .executes(context -> cancelLease(
+                                                                context,
+                                                                services,
+                                                                StringArgumentType.getString(context, "leaseId"),
+                                                                StringArgumentType.getString(context, "reason")
+                                                        )))))))
                 .then(Commands.literal("permissions").executes(context -> showPermissions(context, services))));
     }
 
@@ -111,6 +246,11 @@ public final class UcsCommands {
         source.sendSuccess(() -> Component.translatable("command.ucs.help.tax_preview"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.debt_list"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.debt_clear"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.economy_preview"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.economy_audit"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.economy_refund"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.economy_retry_tax"), false);
+        source.sendSuccess(() -> Component.translatable("command.ucs.help.economy_cancel"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_radius"), false);
         source.sendSuccess(() -> Component.translatable("command.ucs.help.claim_add"), false);
@@ -294,9 +434,26 @@ public final class UcsCommands {
             return 0;
         }
         UcsConfigSnapshot config = com.nadirkhoulali.ucs.config.UcsCommonConfig.snapshot();
+        BigDecimal clearedAmount = services.claimRepository().orElseThrow()
+                .findTaxState(claimId.orElseThrow())
+                .map(ClaimTaxState::outstandingDebt)
+                .orElse(BigDecimal.ZERO);
+        String ownerKey = services.claimRepository().orElseThrow()
+                .findById(claimId.orElseThrow())
+                .map(claim -> claim.owner().stableKey())
+                .orElse("claim:" + claimId.orElseThrow().value());
         return services.claimNonpayment()
                 .clearDebt(services.claimRepository().orElseThrow(), claimId.orElseThrow(), config, Instant.now())
                 .map(state -> {
+                    services.economyAdmin().recordDebtClear(
+                            services.claimRepository().orElseThrow(),
+                            state.claimId(),
+                            ownerKey,
+                            clearedAmount,
+                            actorKey(source),
+                            "manual debt clear",
+                            Instant.now()
+                    );
                     source.sendSuccess(
                             () -> Component.translatable("command.ucs.debt.clear.success", state.claimId().value().toString()),
                             true
@@ -307,6 +464,257 @@ public final class UcsCommands {
                     source.sendFailure(Component.translatable("command.ucs.debt.clear.not_found", claimIdValue));
                     return 0;
                 });
+    }
+
+    private static int previewEconomy(CommandContext<CommandSourceStack> context, UcsServices services, int limit) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+
+        UcsConfigSnapshot config = com.nadirkhoulali.ucs.config.UcsCommonConfig.snapshot();
+        ClaimEconomyPreview preview = services.economyAdmin().preview(
+                services.claimRepository().orElseThrow(),
+                config,
+                services.claimTaxes(),
+                services.economyProviders().activeProvider(),
+                Instant.now(),
+                limit
+        );
+        source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.economy.preview.header",
+                        preview.providerName(),
+                        preview.providerId(),
+                        Boolean.toString(preview.providerAvailable())
+                ),
+                false
+        );
+        source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.economy.preview.pricing",
+                        formatMoney(services, preview.starterClaimPrice()),
+                        formatMoney(services, preview.pricePerExtraChunk()),
+                        Double.toString(preview.refundRatio()),
+                        formatMoney(services, preview.maxClaimSalePrice())
+                ),
+                false
+        );
+        source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.economy.preview.market",
+                        preview.openSaleListings(),
+                        preview.offeredLeases(),
+                        preview.activeLeases(),
+                        preview.delinquentClaims()
+                ),
+                false
+        );
+        source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.economy.preview.tax",
+                        Boolean.toString(preview.taxEnabled()),
+                        formatMoney(services, preview.taxBaseAmount()),
+                        formatMoney(services, preview.taxPerChunkAmount())
+                ),
+                false
+        );
+        if (preview.upcomingTaxes().isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.ucs.tax.preview.empty"), false);
+            return Command.SINGLE_SUCCESS;
+        }
+        preview.upcomingTaxes().forEach(tax -> source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.economy.preview.tax_entry",
+                        tax.displayName(),
+                        formatMoney(services, tax.amount()),
+                        tax.dueAt().toString(),
+                        taxPreviewStatus(tax),
+                        formatMoney(services, tax.state().outstandingDebt())
+                ),
+                false
+        ));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int listEconomyAudit(CommandContext<CommandSourceStack> context, UcsServices services, int limit) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        return sendEconomyAuditList(
+                source,
+                services.economyAdmin().auditEntries(services.claimRepository().orElseThrow(), limit)
+        );
+    }
+
+    private static int listEconomyAuditForClaim(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String claimIdValue,
+            int limit
+    ) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        Optional<ClaimId> claimId = parseEconomyClaimId(source, claimIdValue);
+        if (claimId.isEmpty()) {
+            return 0;
+        }
+        return sendEconomyAuditList(
+                source,
+                services.economyAdmin().auditEntriesForClaim(
+                        services.claimRepository().orElseThrow(),
+                        claimId.orElseThrow(),
+                        limit
+                )
+        );
+    }
+
+    private static int listEconomyAuditForOwner(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String ownerKey,
+            int limit
+    ) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        return sendEconomyAuditList(
+                source,
+                services.economyAdmin().auditEntriesForOwner(
+                        services.claimRepository().orElseThrow(),
+                        ownerKey,
+                        limit
+                )
+        );
+    }
+
+    private static int refundPlayer(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            ServerPlayer player,
+            BigDecimal amount,
+            String reason
+    ) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        ClaimEconomyAdminResult result = services.economyAdmin().refundPlayer(
+                services.claimRepository().orElseThrow(),
+                services.economyProviders().activeProvider(),
+                actorKey(source),
+                player.getUUID(),
+                amount,
+                reason,
+                Instant.now()
+        );
+        return sendEconomyAdminResult(source, result);
+    }
+
+    private static int retryTax(CommandContext<CommandSourceStack> context, UcsServices services, String claimIdValue) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        Optional<ClaimId> claimId = parseEconomyClaimId(source, claimIdValue);
+        if (claimId.isEmpty()) {
+            return 0;
+        }
+        ClaimEconomyAdminResult result = services.economyAdmin().retryTax(
+                services.claimRepository().orElseThrow(),
+                com.nadirkhoulali.ucs.config.UcsCommonConfig.snapshot(),
+                services.economyProviders().activeProvider(),
+                claimId.orElseThrow(),
+                actorKey(source),
+                Instant.now()
+        );
+        return sendEconomyAdminResult(source, result);
+    }
+
+    private static int cancelSale(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String claimIdValue,
+            String reason
+    ) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty() || services.claimService().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        Optional<ClaimId> claimId = parseEconomyClaimId(source, claimIdValue);
+        if (claimId.isEmpty()) {
+            return 0;
+        }
+        ClaimEconomyAdminResult result = services.economyAdmin().cancelSale(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                claimId.orElseThrow(),
+                actorKey(source),
+                reason,
+                Instant.now()
+        );
+        return sendEconomyAdminResult(source, result);
+    }
+
+    private static int cancelLease(
+            CommandContext<CommandSourceStack> context,
+            UcsServices services,
+            String leaseIdValue,
+            String reason
+    ) {
+        CommandSourceStack source = context.getSource();
+        if (!services.permissions().require(source, UcsPermission.ECONOMY_ADMIN)) {
+            return 0;
+        }
+        if (services.claimRepository().isEmpty() || services.claimService().isEmpty()) {
+            source.sendFailure(Component.translatable("command.ucs.claim.service_unavailable"));
+            return 0;
+        }
+        Optional<LeaseId> leaseId = parseLeaseId(source, leaseIdValue);
+        if (leaseId.isEmpty()) {
+            return 0;
+        }
+        ClaimEconomyAdminResult result = services.economyAdmin().cancelLease(
+                services.claimRepository().orElseThrow(),
+                services.claimService().orElseThrow(),
+                leaseId.orElseThrow(),
+                actorKey(source),
+                reason,
+                Instant.now()
+        );
+        return sendEconomyAdminResult(source, result);
     }
 
     private static int restoreArchive(CommandContext<CommandSourceStack> context, UcsServices services, String archiveIdValue) {
@@ -389,6 +797,52 @@ public final class UcsCommands {
         return "scheduled";
     }
 
+    private static int sendEconomyAuditList(CommandSourceStack source, List<EconomyAuditEntry> entries) {
+        if (entries.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("command.ucs.economy.audit.empty"), false);
+            return Command.SINGLE_SUCCESS;
+        }
+        source.sendSuccess(() -> Component.translatable("command.ucs.economy.audit.header", entries.size()), false);
+        entries.forEach(entry -> source.sendSuccess(
+                () -> Component.translatable(
+                        "command.ucs.economy.audit.entry",
+                        entry.occurredAt().toString(),
+                        entry.action().name(),
+                        entry.status().name(),
+                        entry.claimId().map(claimId -> claimId.value().toString()).orElse("-"),
+                        entry.ownerKey(),
+                        entry.amount().toPlainString(),
+                        entry.reference(),
+                        entry.providerId().isBlank() ? "-" : entry.providerId(),
+                        entry.providerReference().isBlank() ? "-" : entry.providerReference(),
+                        entry.reason(),
+                        entry.detail()
+                ),
+                false
+        ));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int sendEconomyAdminResult(CommandSourceStack source, ClaimEconomyAdminResult result) {
+        if (result.success()) {
+            source.sendSuccess(
+                    () -> Component.translatable(
+                            "command.ucs.economy.operation.success",
+                            result.message(),
+                            result.auditEntry().map(entry -> entry.reference()).orElse("-")
+                    ),
+                    true
+            );
+            return Command.SINGLE_SUCCESS;
+        }
+        source.sendFailure(Component.translatable(
+                "command.ucs.economy.operation.failed",
+                result.message(),
+                result.auditEntry().map(entry -> entry.reference()).orElse("-")
+        ));
+        return 0;
+    }
+
     private static Optional<ClaimId> parseClaimId(CommandSourceStack source, String value) {
         try {
             return Optional.of(new ClaimId(UUID.fromString(value)));
@@ -398,8 +852,38 @@ public final class UcsCommands {
         }
     }
 
+    private static Optional<ClaimId> parseEconomyClaimId(CommandSourceStack source, String value) {
+        try {
+            return Optional.of(new ClaimId(UUID.fromString(value)));
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.translatable("command.ucs.economy.invalid_claim_id", value));
+            return Optional.empty();
+        }
+    }
+
+    private static Optional<LeaseId> parseLeaseId(CommandSourceStack source, String value) {
+        try {
+            return Optional.of(new LeaseId(UUID.fromString(value)));
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.translatable("command.ucs.economy.invalid_lease_id", value));
+            return Optional.empty();
+        }
+    }
+
     private static boolean hasDebt(ClaimTaxState state) {
         return state.outstandingDebt().signum() > 0;
+    }
+
+    private static String formatMoney(UcsServices services, BigDecimal amount) {
+        return services.economyProviders().activeProvider().format(amount);
+    }
+
+    private static String actorKey(CommandSourceStack source) {
+        ServerPlayer player = source.getPlayer();
+        if (player != null) {
+            return "player:" + player.getUUID();
+        }
+        return "server:" + source.getTextName();
     }
 
     private static int showPermissions(CommandContext<CommandSourceStack> context, UcsServices services) {

@@ -8,6 +8,7 @@ import com.nadirkhoulali.ucs.api.internal.DefaultUcsApiAccess;
 import com.nadirkhoulali.ucs.api.protection.ProtectionFlagRegistry;
 import com.nadirkhoulali.ucs.claim.ClaimChunkEditService;
 import com.nadirkhoulali.ucs.claim.ClaimCreationService;
+import com.nadirkhoulali.ucs.claim.ClaimEconomyAdminService;
 import com.nadirkhoulali.ucs.claim.ClaimExpulsionService;
 import com.nadirkhoulali.ucs.claim.ClaimLeaseService;
 import com.nadirkhoulali.ucs.claim.ClaimMetadataService;
@@ -42,6 +43,7 @@ public final class UcsServices {
     private final ClaimLeaseService claimLeaseService = new ClaimLeaseService();
     private final ClaimTaxService claimTaxService = new ClaimTaxService();
     private final ClaimNonpaymentService claimNonpaymentService = new ClaimNonpaymentService();
+    private final ClaimEconomyAdminService economyAdminService = new ClaimEconomyAdminService();
     private final ClaimTeleportService claimTeleportService = new ClaimTeleportService();
     private final ClaimProtectionService claimProtectionService = new ClaimProtectionService(protectionAdminService, permissionService);
     private final ClaimMovementService claimMovementService = new ClaimMovementService();
@@ -106,6 +108,10 @@ public final class UcsServices {
 
     public ClaimNonpaymentService claimNonpayment() {
         return claimNonpaymentService;
+    }
+
+    public ClaimEconomyAdminService economyAdmin() {
+        return economyAdminService;
     }
 
     public ClaimTeleportService claimTeleport() {

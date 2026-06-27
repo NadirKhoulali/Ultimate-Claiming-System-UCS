@@ -8,6 +8,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -30,11 +31,13 @@ public final class UcsClaimsSavedData extends SavedData {
     private static final String KEY_ARCHIVES = "archives";
     private static final String KEY_TAX_STATES = "taxStates";
     private static final String KEY_TAX_LEDGER = "taxLedger";
+    private static final String KEY_ECONOMY_AUDIT = "economyAudit";
 
     private final Map<ClaimId, Claim> claims = new LinkedHashMap<>();
     private final Map<ArchiveId, ClaimArchive> archives = new LinkedHashMap<>();
     private final Map<ClaimId, ClaimTaxState> taxStates = new LinkedHashMap<>();
     private final Map<java.util.UUID, ClaimTaxLedgerEntry> taxLedger = new LinkedHashMap<>();
+    private final Map<java.util.UUID, EconomyAuditEntry> economyAudit = new LinkedHashMap<>();
     private ClaimSpatialIndex index = new ClaimSpatialIndex();
 
     public static SavedData.Factory<UcsClaimsSavedData> factory() {
@@ -107,6 +110,22 @@ public final class UcsClaimsSavedData extends SavedData {
             }
         }
 
+        ListTag economyAuditTags = tag.getList(KEY_ECONOMY_AUDIT, Tag.TAG_COMPOUND);
+        for (int i = 0; i < economyAuditTags.size(); i++) {
+            try {
+                EconomyAuditEntry entry = ClaimNbtCodec.decodeEconomyAuditEntry(economyAuditTags.getCompound(i));
+                if (data.economyAudit.containsKey(entry.id())) {
+                    sanitized = true;
+                    UcsMod.LOGGER.error("Skipping duplicate UCS economy audit entry id {}", entry.id());
+                } else {
+                    data.economyAudit.put(entry.id(), entry);
+                }
+            } catch (RuntimeException exception) {
+                sanitized = true;
+                UcsMod.LOGGER.error("Skipping corrupted UCS economy audit entry at index {}", i, exception);
+            }
+        }
+
         if (sanitized) {
             data.setDirty();
         }
@@ -141,6 +160,12 @@ public final class UcsClaimsSavedData extends SavedData {
                 .forEach(taxLedgerTags::add);
         tag.put(KEY_TAX_LEDGER, taxLedgerTags);
 
+        ListTag economyAuditTags = new ListTag();
+        economyAudit.values().stream()
+                .map(ClaimNbtCodec::encodeEconomyAuditEntry)
+                .forEach(economyAuditTags::add);
+        tag.put(KEY_ECONOMY_AUDIT, economyAuditTags);
+
         return tag;
     }
 
@@ -158,6 +183,10 @@ public final class UcsClaimsSavedData extends SavedData {
 
     public Collection<ClaimTaxLedgerEntry> taxLedgerEntries() {
         return List.copyOf(taxLedger.values());
+    }
+
+    public Collection<EconomyAuditEntry> economyAuditEntries() {
+        return List.copyOf(economyAudit.values());
     }
 
     public Optional<ClaimArchive> findArchive(ArchiveId archiveId) {
@@ -191,6 +220,15 @@ public final class UcsClaimsSavedData extends SavedData {
             throw new ClaimRepositoryException("Duplicate tax ledger entry id " + entry.id());
         }
         taxLedger.put(entry.id(), entry);
+        setDirty();
+        return entry;
+    }
+
+    public EconomyAuditEntry appendEconomyAuditEntry(EconomyAuditEntry entry) {
+        if (economyAudit.containsKey(entry.id())) {
+            throw new ClaimRepositoryException("Duplicate economy audit entry id " + entry.id());
+        }
+        economyAudit.put(entry.id(), entry);
         setDirty();
         return entry;
     }

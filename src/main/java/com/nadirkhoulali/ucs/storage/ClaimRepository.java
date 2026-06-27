@@ -7,6 +7,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -21,6 +22,8 @@ public interface ClaimRepository {
 
     Collection<ClaimTaxLedgerEntry> taxLedgerEntries();
 
+    Collection<EconomyAuditEntry> economyAuditEntries();
+
     Optional<ClaimArchive> findArchive(ArchiveId archiveId);
 
     Optional<Claim> findById(ClaimId id);
@@ -34,6 +37,8 @@ public interface ClaimRepository {
     ClaimTaxState saveTaxState(ClaimTaxState taxState);
 
     ClaimTaxLedgerEntry appendTaxLedgerEntry(ClaimTaxLedgerEntry entry);
+
+    EconomyAuditEntry appendEconomyAuditEntry(EconomyAuditEntry entry);
 
     Optional<ClaimTaxState> deleteTaxState(ClaimId claimId);
 

@@ -7,6 +7,7 @@ import com.nadirkhoulali.ucs.core.model.ClaimArchive;
 import com.nadirkhoulali.ucs.core.model.ClaimId;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxLedgerEntry;
 import com.nadirkhoulali.ucs.core.model.ClaimTaxState;
+import com.nadirkhoulali.ucs.core.model.EconomyAuditEntry;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -38,6 +39,11 @@ public final class SavedDataClaimRepository implements ClaimRepository {
     @Override
     public synchronized Collection<ClaimTaxLedgerEntry> taxLedgerEntries() {
         return savedData.taxLedgerEntries();
+    }
+
+    @Override
+    public synchronized Collection<EconomyAuditEntry> economyAuditEntries() {
+        return savedData.economyAuditEntries();
     }
 
     @Override
@@ -75,6 +81,11 @@ public final class SavedDataClaimRepository implements ClaimRepository {
     @Override
     public synchronized ClaimTaxLedgerEntry appendTaxLedgerEntry(ClaimTaxLedgerEntry entry) {
         return savedData.appendTaxLedgerEntry(entry);
+    }
+
+    @Override
+    public synchronized EconomyAuditEntry appendEconomyAuditEntry(EconomyAuditEntry entry) {
+        return savedData.appendEconomyAuditEntry(entry);
     }
 
     @Override
