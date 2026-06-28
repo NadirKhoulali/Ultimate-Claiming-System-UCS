@@ -25,21 +25,22 @@ class TerrainColorEnhancerTest {
     }
 
     @Test
-    void grassColorKeepsBiomeVariationAndAvoidsFlatMapGreen() {
+    void grassColorUsesBiomeTopDownTintDirectly() {
         int plains = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0x91BD59);
         int savanna = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0xBFB755);
 
+        assertEquals(0xFF91BD59, plains);
+        assertEquals(0xFFBFB755, savanna);
         assertNotEquals(plains, savanna);
         assertNotEquals(0xFF7FB238, plains);
-        assertTrue(luminance(savanna) > luminance(plains));
     }
 
     @Test
-    void grassColorDoesNotOvermixDryBrownIntoTopSurface() {
-        int savanna = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0xBFB755);
+    void plainsGrassColorStaysGreenInsteadOfDryBrown() {
+        int plains = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0x91BD59);
 
-        assertTrue(green(savanna) - red(savanna) >= 12);
-        assertTrue(green(savanna) - blue(savanna) >= 80);
+        assertTrue(green(plains) - red(plains) >= 30);
+        assertTrue(green(plains) - blue(plains) >= 90);
     }
 
     @Test
