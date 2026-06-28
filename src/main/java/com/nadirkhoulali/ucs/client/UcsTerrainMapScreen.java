@@ -24,6 +24,10 @@ public final class UcsTerrainMapScreen extends Screen {
     private static final int MAX_REQUEST_TILES = 256;
     private static final int PAN_KEY_PIXELS = 96;
     private static final long REQUEST_DEBOUNCE_MILLIS = 90L;
+    private static final int PLAYER_MARKER_HEAD_SIZE = 24;
+    private static final int PLAYER_MARKER_FRAME_PADDING = 3;
+    private static final int PLAYER_MARKER_POINTER_HEIGHT = 15;
+    private static final int PLAYER_MARKER_POINTER_HALF_WIDTH = 20;
     private static final List<String> CYCLE_DIMENSIONS = List.of(
             "minecraft:overworld",
             "minecraft:the_nether",
@@ -344,9 +348,65 @@ public final class UcsTerrainMapScreen extends Screen {
         if (!bounds.contains(x, y)) {
             return;
         }
-        graphics.fill(x - 1, y - 7, x + 2, y + 8, 0xFFFFFFFF);
-        graphics.fill(x - 7, y - 1, x + 8, y + 2, 0xFFFFFFFF);
-        graphics.fill(x - 3, y - 3, x + 4, y + 4, 0xFF2EC8A6);
+
+        int frameSize = PLAYER_MARKER_HEAD_SIZE + PLAYER_MARKER_FRAME_PADDING * 2;
+        int frameLeft = x - frameSize / 2;
+        int frameTop = y - PLAYER_MARKER_POINTER_HEIGHT - frameSize;
+        int frameRight = frameLeft + frameSize;
+        int frameBottom = frameTop + frameSize;
+        int pointerLeftX = x - PLAYER_MARKER_POINTER_HALF_WIDTH;
+        int pointerRightX = x + PLAYER_MARKER_POINTER_HALF_WIDTH;
+        int pointerTopY = frameBottom + 2;
+
+        drawPlayerMarkerPointer(graphics, pointerLeftX, pointerTopY, x, y);
+        drawPlayerMarkerPointer(graphics, pointerRightX, pointerTopY, x, y);
+        drawPlayerHeadFrame(graphics, player, frameLeft, frameTop, frameSize);
+        drawPlayerMarkerName(graphics, player.getName().getString(), x, frameTop);
+    }
+
+    private void drawPlayerMarkerName(GuiGraphics graphics, String playerName, int centerX, int frameTop) {
+        String label = abbreviate(playerName, 24);
+        int labelWidth = font.width(label);
+        int labelLeft = centerX - labelWidth / 2;
+        int labelTop = frameTop - 15;
+        graphics.fill(labelLeft - 4, labelTop - 2, labelLeft + labelWidth + 4, labelTop + 11, 0xD8000000);
+        graphics.drawString(font, label, labelLeft, labelTop, 0xFFFFFFFF, false);
+    }
+
+    private void drawPlayerHeadFrame(GuiGraphics graphics, LocalPlayer player, int left, int top, int frameSize) {
+        graphics.fill(left - 3, top - 3, left + frameSize + 3, top + frameSize + 3, 0xAA000000);
+        graphics.fill(left - 2, top - 2, left + frameSize + 2, top + frameSize + 2, 0xFF05070A);
+        graphics.fill(left, top, left + frameSize, top + frameSize, 0xFFF7FAFC);
+        graphics.renderOutline(left, top, frameSize, frameSize, 0xFF111820);
+
+        int headLeft = left + PLAYER_MARKER_FRAME_PADDING;
+        int headTop = top + PLAYER_MARKER_FRAME_PADDING;
+        ResourceLocation skin = player.getSkin().texture();
+        graphics.blit(skin, headLeft, headTop, PLAYER_MARKER_HEAD_SIZE, PLAYER_MARKER_HEAD_SIZE, 8.0F, 8.0F, 8, 8, 64, 64);
+        graphics.blit(skin, headLeft, headTop, PLAYER_MARKER_HEAD_SIZE, PLAYER_MARKER_HEAD_SIZE, 40.0F, 8.0F, 8, 8, 64, 64);
+        graphics.renderOutline(headLeft - 1, headTop - 1, PLAYER_MARKER_HEAD_SIZE + 2, PLAYER_MARKER_HEAD_SIZE + 2, 0xFF243241);
+    }
+
+    private static void drawPlayerMarkerPointer(GuiGraphics graphics, int startX, int startY, int endX, int endY) {
+        drawThickLine(graphics, startX + 1, startY + 1, endX + 1, endY + 1, 5, 0x99000000);
+        drawThickLine(graphics, startX, startY, endX, endY, 5, 0xE8FFFFFF);
+        drawThickLine(graphics, startX, startY, endX, endY, 3, 0xF0000000);
+    }
+
+    private static void drawThickLine(GuiGraphics graphics, int startX, int startY, int endX, int endY, int thickness, int color) {
+        int steps = Math.max(Math.abs(endX - startX), Math.abs(endY - startY));
+        if (steps == 0) {
+            int radius = thickness / 2;
+            graphics.fill(startX - radius, startY - radius, startX + radius + 1, startY + radius + 1, color);
+            return;
+        }
+        int radius = thickness / 2;
+        for (int step = 0; step <= steps; step++) {
+            double progress = (double) step / steps;
+            int x = (int) Math.round(startX + (endX - startX) * progress);
+            int y = (int) Math.round(startY + (endY - startY) * progress);
+            graphics.fill(x - radius, y - radius, x + radius + 1, y + radius + 1, color);
+        }
     }
 
     private void renderFrame(GuiGraphics graphics, MapBounds bounds) {
