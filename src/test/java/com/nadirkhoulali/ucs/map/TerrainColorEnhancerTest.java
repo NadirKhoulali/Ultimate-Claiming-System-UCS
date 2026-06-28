@@ -35,6 +35,34 @@ class TerrainColorEnhancerTest {
     }
 
     @Test
+    void grassColorDoesNotOvermixDryBrownIntoTopSurface() {
+        int savanna = TerrainColorEnhancer.grassSurfaceColor(0xFF7FB238, 0xBFB755);
+
+        assertTrue(green(savanna) - red(savanna) >= 12);
+        assertTrue(green(savanna) - blue(savanna) >= 80);
+    }
+
+    @Test
+    void localColorBlendingDoesNotTurnShallowWaterIntoSand() {
+        int water = TerrainColorEnhancer.waterSurfaceColor(0x3F76E4, 1);
+        int sand = 0xFFE0D6A0;
+        int[] colors = new int[]{
+                sand, sand, sand,
+                sand, water, sand,
+                sand, sand, sand
+        };
+        int[] heights = new int[]{
+                63, 63, 63,
+                63, 64, 63,
+                63, 63, 63
+        };
+
+        TerrainColorEnhancer.applyLocalColorBlending(colors, heights, 3);
+
+        assertEquals(water, colors[4]);
+    }
+
+    @Test
     void reliefShadingBrightensSlopesFacingNorthwestLight() {
         int[] colors = new int[9];
         int[] heights = new int[]{
@@ -88,9 +116,18 @@ class TerrainColorEnhancerTest {
     }
 
     private static int luminance(int color) {
-        int red = (color >>> 16) & 0xFF;
-        int green = (color >>> 8) & 0xFF;
-        int blue = color & 0xFF;
-        return (red * 3 + green * 4 + blue) / 8;
+        return (red(color) * 3 + green(color) * 4 + blue(color)) / 8;
+    }
+
+    private static int red(int color) {
+        return (color >>> 16) & 0xFF;
+    }
+
+    private static int green(int color) {
+        return (color >>> 8) & 0xFF;
+    }
+
+    private static int blue(int color) {
+        return color & 0xFF;
     }
 }

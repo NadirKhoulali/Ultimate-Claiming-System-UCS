@@ -50,7 +50,7 @@ public final class LoadedServerTerrainChunkSampler implements TerrainChunkSample
     }
 
     private SurfaceSample findSurface(LevelChunk chunk, int blockX, int blockZ, int localX, int localZ) {
-        int topY = clamp(chunk.getHeight(Heightmap.Types.WORLD_SURFACE, localX, localZ) - 1, level);
+        int topY = clamp(chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, localX, localZ) - 1, level);
         BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos(blockX, topY, blockZ);
         BlockState state = chunk.getBlockState(position);
         if (isDisplaySurface(state, position)) {
