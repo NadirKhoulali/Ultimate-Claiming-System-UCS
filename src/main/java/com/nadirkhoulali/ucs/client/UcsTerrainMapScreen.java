@@ -24,10 +24,10 @@ public final class UcsTerrainMapScreen extends Screen {
     private static final int MAX_REQUEST_TILES = 256;
     private static final int PAN_KEY_PIXELS = 96;
     private static final long REQUEST_DEBOUNCE_MILLIS = 90L;
-    private static final int PLAYER_MARKER_HEAD_SIZE = 24;
-    private static final int PLAYER_MARKER_FRAME_PADDING = 3;
-    private static final int PLAYER_MARKER_POINTER_HEIGHT = 15;
-    private static final int PLAYER_MARKER_POINTER_HALF_WIDTH = 20;
+    private static final int PLAYER_MARKER_HEAD_SIZE = 18;
+    private static final int PLAYER_MARKER_FRAME_PADDING = 2;
+    private static final int PLAYER_MARKER_POINTER_HEIGHT = 16;
+    private static final int PLAYER_MARKER_POINTER_HALF_WIDTH = 9;
     private static final List<String> CYCLE_DIMENSIONS = List.of(
             "minecraft:overworld",
             "minecraft:the_nether",
@@ -369,28 +369,21 @@ public final class UcsTerrainMapScreen extends Screen {
         int labelWidth = font.width(label);
         int labelLeft = centerX - labelWidth / 2;
         int labelTop = frameTop - 15;
-        graphics.fill(labelLeft - 4, labelTop - 2, labelLeft + labelWidth + 4, labelTop + 11, 0xD8000000);
-        graphics.drawString(font, label, labelLeft, labelTop, 0xFFFFFFFF, false);
+        graphics.drawString(font, label, labelLeft, labelTop, 0xFFFFFFFF, true);
     }
 
     private void drawPlayerHeadFrame(GuiGraphics graphics, LocalPlayer player, int left, int top, int frameSize) {
-        graphics.fill(left - 3, top - 3, left + frameSize + 3, top + frameSize + 3, 0xAA000000);
-        graphics.fill(left - 2, top - 2, left + frameSize + 2, top + frameSize + 2, 0xFF05070A);
-        graphics.fill(left, top, left + frameSize, top + frameSize, 0xFFF7FAFC);
-        graphics.renderOutline(left, top, frameSize, frameSize, 0xFF111820);
+        graphics.fill(left, top, left + frameSize, top + frameSize, 0xFFFFFFFF);
 
         int headLeft = left + PLAYER_MARKER_FRAME_PADDING;
         int headTop = top + PLAYER_MARKER_FRAME_PADDING;
         ResourceLocation skin = player.getSkin().texture();
         graphics.blit(skin, headLeft, headTop, PLAYER_MARKER_HEAD_SIZE, PLAYER_MARKER_HEAD_SIZE, 8.0F, 8.0F, 8, 8, 64, 64);
         graphics.blit(skin, headLeft, headTop, PLAYER_MARKER_HEAD_SIZE, PLAYER_MARKER_HEAD_SIZE, 40.0F, 8.0F, 8, 8, 64, 64);
-        graphics.renderOutline(headLeft - 1, headTop - 1, PLAYER_MARKER_HEAD_SIZE + 2, PLAYER_MARKER_HEAD_SIZE + 2, 0xFF243241);
     }
 
     private static void drawPlayerMarkerPointer(GuiGraphics graphics, int startX, int startY, int endX, int endY) {
-        drawThickLine(graphics, startX + 1, startY + 1, endX + 1, endY + 1, 5, 0x99000000);
-        drawThickLine(graphics, startX, startY, endX, endY, 5, 0xE8FFFFFF);
-        drawThickLine(graphics, startX, startY, endX, endY, 3, 0xF0000000);
+        drawThickLine(graphics, startX, startY, endX, endY, 2, 0xFFFFFFFF);
     }
 
     private static void drawThickLine(GuiGraphics graphics, int startX, int startY, int endX, int endY, int thickness, int color) {

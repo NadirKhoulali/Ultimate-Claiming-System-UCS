@@ -5,6 +5,7 @@ import net.minecraft.core.QuartPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.FoliageColor;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.biome.Biome;
@@ -50,7 +51,9 @@ public final class LoadedServerTerrainChunkSampler implements TerrainChunkSample
     }
 
     private SurfaceSample findSurface(LevelChunk chunk, int blockX, int blockZ, int localX, int localZ) {
-        int topY = clamp(chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, localX, localZ) - 1, level);
+        int worldSurfaceY = clamp(chunk.getHeight(Heightmap.Types.WORLD_SURFACE, localX, localZ) - 1, level);
+        int motionSurfaceY = clamp(chunk.getHeight(Heightmap.Types.MOTION_BLOCKING, localX, localZ) - 1, level);
+        int topY = Math.max(worldSurfaceY, motionSurfaceY);
         BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos(blockX, topY, blockZ);
         BlockState state = chunk.getBlockState(position);
         if (isDisplaySurface(state, position)) {
@@ -103,9 +106,19 @@ public final class LoadedServerTerrainChunkSampler implements TerrainChunkSample
             return TerrainColorEnhancer.grassSurfaceColor(mapColor, blendedBiomeColor(chunk, position, BiomeColorMode.GRASS));
         }
         if (state.is(BlockTags.LEAVES)) {
-            return TerrainColorEnhancer.foliageSurfaceColor(mapColor, blendedBiomeColor(chunk, position, BiomeColorMode.FOLIAGE));
+            return TerrainColorEnhancer.foliageSurfaceColor(mapColor, foliageColor(chunk, state, position));
         }
         return mapColor;
+    }
+
+    private int foliageColor(LevelChunk chunk, BlockState state, BlockPos position) {
+        if (state.is(Blocks.SPRUCE_LEAVES)) {
+            return FoliageColor.getEvergreenColor();
+        }
+        if (state.is(Blocks.BIRCH_LEAVES)) {
+            return FoliageColor.getBirchColor();
+        }
+        return blendedBiomeColor(chunk, position, BiomeColorMode.FOLIAGE);
     }
 
     private int blendedBiomeColor(LevelChunk chunk, BlockPos center, BiomeColorMode mode) {

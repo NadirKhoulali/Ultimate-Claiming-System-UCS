@@ -4,7 +4,6 @@ import java.util.Objects;
 
 public final class TerrainColorEnhancer {
     private static final int DEFAULT_WATER_TINT = 0xFF2B5D9D;
-    private static final int FOLIAGE_SHADOW_MIX = 0xFF203D1D;
     private static final double LIGHT_X = -0.55D;
     private static final double LIGHT_Z = -0.62D;
     private static final double LIGHT_Y = 0.56D;
@@ -28,9 +27,7 @@ public final class TerrainColorEnhancer {
     }
 
     public static int foliageSurfaceColor(int mapColor, int biomeFoliageColor) {
-        int biomeDominant = blend(opaque(mapColor), opaque(biomeFoliageColor), 0.78D);
-        int grounded = blend(biomeDominant, FOLIAGE_SHADOW_MIX, 0.16D);
-        return multiply(adjustSaturation(grounded, 0.74D), 0.82D);
+        return opaque(biomeFoliageColor);
     }
 
     public static void applyLocalColorBlending(int[] colors, int[] heights, int size) {

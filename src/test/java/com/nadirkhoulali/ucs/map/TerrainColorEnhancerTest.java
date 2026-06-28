@@ -17,11 +17,10 @@ class TerrainColorEnhancerTest {
     }
 
     @Test
-    void foliageColorUsesBiomeTintAndDarkensCanopy() {
+    void foliageColorUsesTopDownTintDirectly() {
         int foliage = TerrainColorEnhancer.foliageSurfaceColor(0xFF00FF00, 0x33691E);
 
-        assertNotEquals(0xFF00FF00, foliage);
-        assertTrue(luminance(foliage) < luminance(0xFF00FF00));
+        assertEquals(0xFF33691E, foliage);
     }
 
     @Test
